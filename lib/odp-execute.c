@@ -499,6 +499,14 @@ odp_execute_set_action(struct dp_packet *packet, const struct nlattr *a)
         set_mpls_lse(packet, nl_attr_get_be32(a));
         break;
 
+    case OVS_KEY_ATTR_VERIFY: {
+        const struct ovs_key_verify *verify_key
+            = nl_attr_get_unspec(a, sizeof(struct ovs_key_verify));
+        eth_set_verify(packet, verify_key->verify_port,
+                   verify_key->verify_rule);
+        break;
+    }
+
     case OVS_KEY_ATTR_ARP:
         set_arp(packet, nl_attr_get(a), NULL);
         break;
@@ -665,6 +673,7 @@ odp_execute_masked_set_action(struct dp_packet *packet,
     case OVS_KEY_ATTR_ICMP:
     case OVS_KEY_ATTR_ICMPV6:
     case OVS_KEY_ATTR_TCP_FLAGS:
+    case OVS_KEY_ATTR_VERIFY:
     case __OVS_KEY_ATTR_MAX:
     default:
         OVS_NOT_REACHED();
@@ -811,6 +820,8 @@ requires_datapath_assistance(const struct nlattr *a)
     case OVS_ACTION_ATTR_HASH:
     case OVS_ACTION_ATTR_PUSH_MPLS:
     case OVS_ACTION_ATTR_POP_MPLS:
+    case OVS_ACTION_ATTR_PUSH_VERIFY:
+    case OVS_ACTION_ATTR_POP_VERIFY:
     case OVS_ACTION_ATTR_TRUNC:
     case OVS_ACTION_ATTR_PUSH_ETH:
     case OVS_ACTION_ATTR_POP_ETH:
@@ -951,6 +962,21 @@ odp_execute_actions(void *dp, struct dp_packet_batch *batch, bool steal,
         case OVS_ACTION_ATTR_POP_MPLS:
             DP_PACKET_BATCH_FOR_EACH (i, packet, batch) {
                 pop_mpls(packet, nl_attr_get_be16(a));
+            }
+            break;
+
+        case OVS_ACTION_ATTR_PUSH_VERIFY: {
+            const struct ovs_action_push_verify *verify = nl_attr_get(a);
+
+            DP_PACKET_BATCH_FOR_EACH (i, packet, batch) {
+                eth_push_verify(packet, verify->verify_port, verify->verify_rule);
+            }
+            break;
+        }
+
+        case OVS_ACTION_ATTR_POP_VERIFY:
+            DP_PACKET_BATCH_FOR_EACH (i, packet, batch) {
+                eth_pop_verify(packet);
             }
             break;
 

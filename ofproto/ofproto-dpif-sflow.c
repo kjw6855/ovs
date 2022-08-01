@@ -1000,6 +1000,7 @@ sflow_read_set_action(const struct nlattr *attr,
     case OVS_KEY_ATTR_IN_PORT:
     case OVS_KEY_ATTR_ETHERNET:
     case OVS_KEY_ATTR_VLAN:
+    case OVS_KEY_ATTR_VERIFY:
         break;
 
     case OVS_KEY_ATTR_MPLS: {
@@ -1194,6 +1195,10 @@ dpif_sflow_read_actions(const struct flow *flow,
              * construct a VLAN-stack. The sFlow user-action cookie already
              * captures the egress VLAN ID so there is nothing more to do here.
              */
+            break;
+
+        case OVS_ACTION_ATTR_PUSH_VERIFY:
+        case OVS_ACTION_ATTR_POP_VERIFY:
             break;
 
         case OVS_ACTION_ATTR_PUSH_MPLS: {

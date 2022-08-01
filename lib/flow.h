@@ -112,6 +112,9 @@ void flow_skip_common_vlan_headers(const struct flow *a, int *p_an,
 void flow_pop_vlan(struct flow*, struct flow_wildcards*);
 void flow_push_vlan_uninit(struct flow*, struct flow_wildcards*);
 
+void flow_pop_verify(struct flow*, struct flow_wildcards*);
+void flow_push_verify_uninit(struct flow*, struct flow_wildcards*);
+
 int flow_count_mpls_labels(const struct flow *, struct flow_wildcards *);
 int flow_count_common_mpls_labels(const struct flow *a, int an,
                                   const struct flow *b, int bn,

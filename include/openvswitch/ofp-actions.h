@@ -95,6 +95,10 @@ struct vl_mff_map;
     OFPACT(POP_MPLS,        ofpact_pop_mpls,    ofpact, "pop_mpls")     \
     OFPACT(DEC_NSH_TTL,     ofpact_null,        ofpact, "dec_nsh_ttl")  \
     OFPACT(DELETE_FIELD,    ofpact_delete_field, ofpact, "delete_field") \
+    OFPACT(SET_VERIFY_PORT, ofpact_verify_port, ofpact, "set_verify_port")\
+    OFPACT(SET_VERIFY_RULE, ofpact_verify_rule, ofpact, "set_verify_rule")\
+    OFPACT(PUSH_VERIFY,     ofpact_push_verify, ofpact, "push_verify")  \
+    OFPACT(POP_VERIFY,      ofpact_null,        ofpact, "pop_verify")   \
                                                                         \
     /* Generic encap & decap */                                         \
     OFPACT(ENCAP,           ofpact_encap,       props, "encap")         \
@@ -452,6 +456,32 @@ struct ofpact_push_vlan {
         ovs_be16 ethertype;
     );
 };
+
+/* PAZZ-related impl. */
+/* OFPACT_SET_VERIFY_PORT */
+struct ofpact_verify_port {
+    OFPACT_PADDED_MEMBERS(
+        struct ofpact ofpact;
+        ovs_be32 verify_port;
+    );
+};
+
+/* OFPACT_SET_VERIFY_RULE */
+struct ofpact_verify_rule {
+    OFPACT_PADDED_MEMBERS(
+        struct ofpact ofpact;
+        ovs_be16 verify_rule;
+    );
+};
+
+/* OFPACT_PUSH_VERIFY */
+struct ofpact_push_verify {
+    OFPACT_PADDED_MEMBERS(
+        struct ofpact ofpact;
+        ovs_be16 ethertype;
+    );
+};
+
 
 /* OFPACT_SET_ETH_SRC, OFPACT_SET_ETH_DST.
  *

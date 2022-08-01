@@ -63,6 +63,11 @@ struct vlan_head {
 	__be16 tci;  /* 0 if no VLAN, VLAN_CFI_MASK set otherwise. */
 };
 
+struct verify_head {
+    __be32 port;
+    __be16 rule;
+};
+
 #define OVS_SW_FLOW_KEY_METADATA_SIZE			\
 	(offsetof(struct sw_flow_key, recirc_id) +	\
 	sizeof_field(struct sw_flow_key, recirc_id))
@@ -92,6 +97,7 @@ struct sw_flow_key {
 		struct vlan_head cvlan;
 		__be16 type;		/* Ethernet frame type. */
 	} eth;
+    struct verify_head vhead;
 	/* Filling a hole of two bytes. */
 	u8 ct_state;
 	u8 ct_orig_proto;		/* CT original direction tuple IP

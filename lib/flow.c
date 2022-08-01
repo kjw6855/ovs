@@ -2760,6 +2760,20 @@ flow_push_vlan_uninit(struct flow *flow, struct flow_wildcards *wc)
     memset(&flow->vlans[0], 0, sizeof(union flow_vlan_hdr));
 }
 
+void
+flow_pop_verify(struct flow *flow, struct flow_wildcards *wc)
+{
+    flow->verify_port = 0;
+    flow->verify_rule = 0;
+}
+
+void
+flow_push_verify_uninit(struct flow *flow, struct flow_wildcards *wc)
+{
+    flow->verify_port = 1;
+    flow->verify_rule = 1;  // TODO: hash
+}
+
 /* Returns the number of MPLS LSEs present in 'flow'
  *
  * Returns 0 if the 'dl_type' of 'flow' is not an MPLS ethernet type.
@@ -3207,6 +3221,11 @@ flow_compose(struct dp_packet *p, const struct flow *flow,
         struct eth_header *eth = dp_packet_eth(p);
         eth->eth_type = htons(dp_packet_size(p));
         return;
+    }
+
+    if (flow->verify_rule > 0) {
+        eth_push_verify(p, flow->verify_port,
+                        flow->verify_rule);
     }
 
     for (int encaps = FLOW_MAX_VLAN_HEADERS - 1; encaps >= 0; encaps--) {

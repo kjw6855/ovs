@@ -5711,6 +5711,10 @@ reversible_actions(const struct ofpact *ofpacts, size_t ofpacts_len)
         case OFPACT_WRITE_METADATA:
         case OFPACT_CHECK_PKT_LARGER:
         case OFPACT_DELETE_FIELD:
+        case OFPACT_SET_VERIFY_PORT:
+        case OFPACT_SET_VERIFY_RULE:
+        case OFPACT_PUSH_VERIFY:
+        case OFPACT_POP_VERIFY:
             break;
 
         case OFPACT_CT:
@@ -6021,6 +6025,10 @@ freeze_unroll_actions(const struct ofpact *a, const struct ofpact *end,
         case OFPACT_NAT:
         case OFPACT_CHECK_PKT_LARGER:
         case OFPACT_DELETE_FIELD:
+        case OFPACT_SET_VERIFY_PORT:
+        case OFPACT_SET_VERIFY_RULE:
+        case OFPACT_PUSH_VERIFY:
+        case OFPACT_POP_VERIFY:
             /* These may not generate PACKET INs. */
             break;
 
@@ -6683,6 +6691,10 @@ recirc_for_mpls(const struct ofpact *a, struct xlate_ctx *ctx)
     case OFPACT_GOTO_TABLE:
     case OFPACT_CHECK_PKT_LARGER:
     case OFPACT_DELETE_FIELD:
+    case OFPACT_SET_VERIFY_PORT:
+    case OFPACT_SET_VERIFY_RULE:
+    case OFPACT_PUSH_VERIFY:
+    case OFPACT_POP_VERIFY:
     default:
         break;
     }
@@ -6843,6 +6855,23 @@ do_xlate_actions(const struct ofpact *ofpacts, size_t ofpacts_len,
             flow_push_vlan_uninit(flow, wc);
             flow->vlans[0].tpid = ofpact_get_PUSH_VLAN(a)->ethertype;
             flow->vlans[0].tci = htons(VLAN_CFI);
+            break;
+
+        case OFPACT_SET_VERIFY_PORT:
+            flow->verify_port = ofpact_get_SET_VERIFY_PORT(a)->verify_port;
+            break;
+
+        case OFPACT_SET_VERIFY_RULE:
+            flow->verify_rule = ofpact_get_SET_VERIFY_RULE(a)->verify_rule;
+            break;
+
+        case OFPACT_PUSH_VERIFY:
+            flow_push_verify_uninit(flow, wc);
+            flow->verify_rule = 1;
+            break;
+
+        case OFPACT_POP_VERIFY:
+            flow_pop_verify(flow, wc);
             break;
 
         case OFPACT_SET_ETH_SRC:

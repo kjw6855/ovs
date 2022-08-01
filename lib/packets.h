@@ -349,6 +349,9 @@ void compose_rarp(struct dp_packet *, const struct eth_addr);
 
 void eth_push_vlan(struct dp_packet *, ovs_be16 tpid, ovs_be16 tci);
 void eth_pop_vlan(struct dp_packet *);
+void eth_push_verify(struct dp_packet *, ovs_be32 port, ovs_be16 rule);
+void eth_pop_verify(struct dp_packet *);
+void eth_set_verify(struct dp_packet *, ovs_be32 port, ovs_be16 rule);
 
 const char *eth_from_hex(const char *hex, struct dp_packet **packetp);
 void eth_format_masked(const struct eth_addr ea,
@@ -424,6 +427,7 @@ ovs_be32 set_mpls_lse_values(uint8_t ttl, uint8_t tc, uint8_t bos,
 #define ETH_TYPE_NSH           0x894f
 #define ETH_TYPE_ERSPAN1       0x88be   /* version 1 type II */
 #define ETH_TYPE_ERSPAN2       0x22eb   /* version 2 type III */
+#define ETH_TYPE_PAZZ          0x2080
 
 static inline bool eth_type_mpls(ovs_be16 eth_type)
 {
@@ -435,6 +439,11 @@ static inline bool eth_type_vlan(ovs_be16 eth_type)
 {
     return eth_type == htons(ETH_TYPE_VLAN_8021Q) ||
         eth_type == htons(ETH_TYPE_VLAN_8021AD);
+}
+
+static inline bool eth_type_verify(ovs_be16 eth_type)
+{
+    return eth_type == htons(ETH_TYPE_PAZZ);
 }
 
 
@@ -546,6 +555,22 @@ struct vlan_eth_header {
     ovs_be16 veth_next_type;
 };
 BUILD_ASSERT_DECL(VLAN_ETH_HEADER_LEN == sizeof(struct vlan_eth_header));
+
+/* PAZZ related definitions */
+#define VERIFY_HLEN         8
+struct verify_hdr {
+    ovs_be16 verify_type;
+    ovs_be32 verify_port;
+    ovs_be16 verify_rule;
+};
+
+struct verify_eth_header {
+    struct eth_addr veth_dst;
+    struct eth_addr veth_src;
+    ovs_be16 veth_type;         /* Always htons(ETH_TYPE_PAZZ). */
+    ovs_be32 veth_port;         /* Lowest 12 bits are VLAN ID. */
+    ovs_be16 veth_rule;
+};
 
 /* MPLS related definitions */
 #define MPLS_TTL_MASK       0x000000ff

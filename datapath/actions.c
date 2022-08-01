@@ -307,6 +307,85 @@ static int push_vlan(struct sk_buff *skb, struct sw_flow_key *key,
 			     ntohs(vlan->vlan_tci) & ~VLAN_CFI_MASK);
 }
 
+static int push_verify(struct sk_buff *skb, struct sw_flow_key *key,
+		     const struct ovs_action_push_verify *verify)
+{
+    struct verify_hdr *new_verify;
+
+    skb_push(skb, VERIFY_HLEN);
+    memmove(skb_mac_header(skb) - VERIFY_HLEN, skb_mac_header(skb),
+            skb->mac_len);
+    skb_reset_mac_header(skb);
+
+    new_verify = (struct verify_hdr *) (skb_mac_header(skb) + skb->mac_len);
+    new_verify->verify_rule = 1;
+
+    skb_postpush_rcsum(skb, new_verify, VERIFY_HLEN);
+
+    if (ovs_key_mac_proto(key) == MAC_PROTO_ETHERNET)
+        update_ethertype(skb, eth_hdr(skb), ETH_TYPE_PAZZ);
+    skb->protocol = ETH_TYPE_PAZZ;
+
+    invalidate_flow_key(key);
+    return 0;
+}
+
+static int pop_verify(struct sk_buff *skb, struct sw_flow_key *key)
+{
+    struct verify_hdr *new_verify;
+    int err;
+
+    err = skb_ensure_writable(skb, skb->mac_len + VERIFY_HLEN);
+    if (unlikely(err))
+        return err;
+
+    new_verify = (struct verify_hdr *) (skb_mac_header(skb) + skb->mac_len);
+    skb_postpull_rcsum(skb, new_verify, VERIFY_HLEN);
+
+    memmove(skb_mac_header(skb) + VERIFY_HLEN, skb_mac_header(skb),
+            skb->mac_len);
+
+    __skb_pull(skb, VERIFY_HLEN);
+    skb_reset_mac_header(skb);
+    skb_set_network_header(skb, skb->mac_len);
+
+    if (ovs_key_mac_proto(key) == MAC_PROTO_ETHERNET) {
+        struct ethhdr *hdr;
+        struct verify_hdr *verify_hdr;
+
+        /* mpls_hdr() is used to locate the ethertype
+         * field correctly in the presence of VLAN tags.
+         */
+        verify_hdr = (struct verify_hdr *) (skb_mac_header(skb) + skb->mac_len);
+        hdr = (struct ethhdr *)((void*)verify_hdr - ETH_HLEN);
+        update_ethertype(skb, hdr, ethertype);
+    }
+    if (eth_p_mpls(skb->protocol))
+        skb->protocol = ethertype;
+
+    invalidate_flow_key(key);
+    return 0;
+}
+
+static int set_verify(struct sk_buff *skb, struct sw_flow_key *flow_key,
+            const __be32 port, const __be16 rule)
+{
+    struct verify_hdr *new_verify;
+    int err;
+    err = skb_ensure_writable(skb, skb->mac_len + VERIFY_HLEN);
+    if (unlikely(err))
+        return err;
+
+    new_verify = (struct verify_hdr *) (skb_mac_header(skb) + skb->mac_len);
+
+    new_verify->verify_type = ETH_PAZZ;
+    new_verify->verify_port = port;
+    new_verify->verify_rule = rule;
+    flow_key->vhead.port = port;
+    flow_key->vhead.rule = rule;
+    return 0;
+}
+
 /* 'src' is already properly masked. */
 static void ether_addr_copy_masked(u8 *dst_, const u8 *src_, const u8 *mask_)
 {
@@ -1120,7 +1199,12 @@ static int execute_set_action(struct sk_buff *skb,
 		ovs_dst_hold((struct dst_entry *)tun->tun_dst);
 		ovs_skb_dst_set(skb, (struct dst_entry *)tun->tun_dst);
 		return 0;
-	}
+    } else if (nla_type(a) == OVS_KEY_ATTR_VERIFY) {
+		struct ovs_key_verify *verify = nla_data(a);
+        err = set_verify(skb, flow_key, verify->verify_port, verify->verify_rule);
+        return 0;
+    }
+
 
 	return -EINVAL;
 }
@@ -1323,6 +1407,14 @@ static int do_execute_actions(struct datapath *dp, struct sk_buff *skb,
 
 		case OVS_ACTION_ATTR_POP_VLAN:
 			err = pop_vlan(skb, key);
+			break;
+
+		case OVS_ACTION_ATTR_PUSH_VERIFY:
+			err = push_verify(skb, key, nla_data(a));
+			break;
+
+		case OVS_ACTION_ATTR_POP_VERIFY:
+			err = pop_verify(skb, key);
 			break;
 
 		case OVS_ACTION_ATTR_RECIRC: {

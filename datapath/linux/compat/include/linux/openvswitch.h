@@ -364,6 +364,7 @@ enum ovs_key_attr {
 	OVS_KEY_ATTR_MPLS,      /* array of struct ovs_key_mpls.
 				 * The implementation may restrict
 				 * the accepted length of the array. */
+    //OVS_KEY_ATTR_VERIFY,
 	OVS_KEY_ATTR_CT_STATE,	/* u32 bitmask of OVS_CS_F_* */
 	OVS_KEY_ATTR_CT_ZONE,	/* u16 connection tracking zone. */
 	OVS_KEY_ATTR_CT_MARK,	/* u32 connection tracking mark */
@@ -383,6 +384,7 @@ enum ovs_key_attr {
 	OVS_KEY_ATTR_ND_EXTENSIONS, /* struct ovs_key_nd_extensions */
 #endif
 
+    OVS_KEY_ATTR_VERIFY,
 	__OVS_KEY_ATTR_MAX
 };
 
@@ -458,6 +460,11 @@ struct ovs_key_ethernet {
 
 struct ovs_key_mpls {
 	__be32 mpls_lse;
+};
+
+struct ovs_key_verify {
+    __be32 verify_port;
+    __be16 verify_rule;
 };
 
 struct ovs_key_ipv4 {
@@ -751,6 +758,12 @@ struct ovs_action_push_vlan {
 	__be16 vlan_tci;	/* 802.1Q TCI (VLAN ID and priority). */
 };
 
+// “Ethertype” 2080
+struct ovs_action_push_verify {
+    __be32 verify_port;
+    __be16 verify_rule;
+};
+
 /* Data path hash algorithm for computing Datapath hash.
  *
  * The algorithm type only specifies the fields in a flow
@@ -999,6 +1012,8 @@ enum ovs_action_attr {
 	OVS_ACTION_ATTR_SET,          /* One nested OVS_KEY_ATTR_*. */
 	OVS_ACTION_ATTR_PUSH_VLAN,    /* struct ovs_action_push_vlan. */
 	OVS_ACTION_ATTR_POP_VLAN,     /* No argument. */
+	OVS_ACTION_ATTR_PUSH_VERIFY,  /* struct ovs_action_push_verify. */
+	OVS_ACTION_ATTR_POP_VERIFY,   /* No argument. */
 	OVS_ACTION_ATTR_SAMPLE,       /* Nested OVS_SAMPLE_ATTR_*. */
 	OVS_ACTION_ATTR_RECIRC,       /* u32 recirc_id. */
 	OVS_ACTION_ATTR_HASH,	      /* struct ovs_action_hash. */

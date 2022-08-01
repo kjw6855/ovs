@@ -262,6 +262,18 @@ enum ofp_raw_action_type {
     /* OF1.5+(29): uint32_t. */
     OFPAT_RAW15_METER,
 
+    /* OF1.0+(30): ovs_be32. */
+    OFPAT_RAW_SET_VERIFY_PORT,
+
+    /* OF1.0+(31): ovs_be16. */
+    OFPAT_RAW_SET_VERIFY_RULE,
+
+    /* OF1.0+(32): void. */
+    OFPAT_RAW_PUSH_VERIFY,
+
+    /* OF1.0+(33): void. */
+    OFPAT_RAW_POP_VERIFY,
+
 /* ## ------------------------- ## */
 /* ## Nicira extension actions. ## */
 /* ## ------------------------- ## */
@@ -479,6 +491,10 @@ ofpact_next_flattened(const struct ofpact *ofpact)
     case OFPACT_DEC_MPLS_TTL:
     case OFPACT_PUSH_MPLS:
     case OFPACT_POP_MPLS:
+    case OFPACT_SET_VERIFY_PORT:
+    case OFPACT_SET_VERIFY_RULE:
+    case OFPACT_PUSH_VERIFY:
+    case OFPACT_POP_VERIFY:
     case OFPACT_SET_TUNNEL:
     case OFPACT_SET_QUEUE:
     case OFPACT_POP_QUEUE:
@@ -4065,6 +4081,199 @@ check_POP_MPLS(const struct ofpact_pop_mpls *a, struct ofpact_check_params *cp)
         inconsistent_match(&cp->usable_protocols);
     }
     flow->dl_type = a->ethertype;
+    return 0;
+}
+
+/* Set VERIFY_PORT action. */
+
+static enum ofperr
+decode_OFPAT_RAW_SET_VERIFY_PORT(ovs_be32 port,
+                                 enum ofp_version ofp_version OVS_UNUSED,
+                                 struct ofpbuf *out)
+{
+    ofpact_put_SET_VERIFY_PORT(out)->verify_port = port;
+    return 0;
+}
+
+static void
+encode_SET_VERIFY_PORT(const struct ofpact_verify_port *verify_port,
+                 enum ofp_version ofp_version OVS_UNUSED, struct ofpbuf *out)
+{
+    put_OFPAT_SET_VERIFY_PORT(out, verify_port->verify_port);
+}
+
+static char * OVS_WARN_UNUSED_RESULT
+parse_SET_VERIFY_PORT(char *arg, const struct ofpact_parse_params *pp)
+{
+    struct ofpact_verify_port *verify_port;
+    char *error;
+    uint32_t pcp;
+
+    error = str_to_u32(arg, &pcp);
+    if (error)
+        return error;
+
+    verify_port = ofpact_put_SET_VERIFY_PORT(pp->ofpacts);
+    verify_port->verify_port = pcp;
+
+    return NULL;
+}
+
+
+static void
+format_SET_VERIFY_PORT(const struct ofpact_verify_port *a,
+                 const struct ofpact_format_params *fp)
+{
+    ds_put_format(fp->s, "%sset_verify_port:%s%"PRIu32,
+                  colors.param, colors.end, a->verify_port);
+}
+
+static enum ofperr
+check_SET_VERIFY_PORT(const struct ofpact_verify_port *a OVS_UNUSED,
+                struct ofpact_check_params *cp)
+{
+    ovs_be16 dl_type = get_dl_type(&cp->match->flow);
+    if (!eth_type_verify(dl_type)) {
+        inconsistent_match(&cp->usable_protocols);
+    }
+    return 0;
+}
+
+/* Set VERIFY_RULE action. */
+
+static enum ofperr
+decode_OFPAT_RAW_SET_VERIFY_RULE(ovs_be16 rule,
+                                 enum ofp_version ofp_version OVS_UNUSED,
+                                 struct ofpbuf *out)
+{
+    ofpact_put_SET_VERIFY_RULE(out)->verify_rule = rule;
+    return 0;
+}
+
+static void
+encode_SET_VERIFY_RULE(const struct ofpact_verify_rule *verify_rule,
+                 enum ofp_version ofp_version OVS_UNUSED, struct ofpbuf *out)
+{
+    put_OFPAT_SET_VERIFY_RULE(out, verify_rule->verify_rule);
+}
+
+static char * OVS_WARN_UNUSED_RESULT
+parse_SET_VERIFY_RULE(char *arg, const struct ofpact_parse_params *pp)
+{
+    struct ofpact_verify_rule *verify_rule;
+    char *error;
+    uint16_t pcp;
+
+    error = str_to_u16(arg, "SET VERIFY RULE", &pcp);
+    if (error)
+        return error;
+
+    verify_rule = ofpact_put_SET_VERIFY_RULE(pp->ofpacts);
+    verify_rule->verify_rule = pcp;
+    return NULL;
+}
+
+
+static void
+format_SET_VERIFY_RULE(const struct ofpact_verify_rule *a,
+                 const struct ofpact_format_params *fp)
+{
+    ds_put_format(fp->s, "%sset_verify_rule(%s%"PRIu16"%s)%s",
+                  colors.paren, colors.end, ntohl(a->verify_rule),
+                  colors.paren, colors.end);
+}
+
+static enum ofperr
+check_SET_VERIFY_RULE(const struct ofpact_verify_rule *a OVS_UNUSED,
+                struct ofpact_check_params *cp)
+{
+    ovs_be16 dl_type = get_dl_type(&cp->match->flow);
+    if (!eth_type_verify(dl_type)) {
+        inconsistent_match(&cp->usable_protocols);
+    }
+    return 0;
+}
+
+/* Push VERIFY action. */
+
+static enum ofperr
+decode_OFPAT_RAW_PUSH_VERIFY(struct ofpbuf *out)
+{
+    struct ofpact_push_verify *push_verify;
+    push_verify = ofpact_put_PUSH_VERIFY(out);
+    push_verify->ethertype = ETH_TYPE_PAZZ;
+    return 0;
+}
+
+static void
+encode_PUSH_VERIFY(const struct ofpact_push_verify *push_verify OVS_UNUSED,
+                 enum ofp_version ofp_version OVS_UNUSED, struct ofpbuf *out)
+{
+    put_OFPAT_PUSH_VERIFY(out);
+}
+
+static char * OVS_WARN_UNUSED_RESULT
+parse_PUSH_VERIFY(char *arg, const struct ofpact_parse_params *pp)
+{
+    struct ofpact_push_verify *push_verify;
+
+    push_verify = ofpact_put_PUSH_VERIFY(pp->ofpacts);
+    push_verify->ethertype = htons(ETH_TYPE_PAZZ);
+    return NULL;
+}
+
+static void
+format_PUSH_VERIFY(const struct ofpact_push_verify *push_verify,
+                 const struct ofpact_format_params *fp)
+{
+    ds_put_format(fp->s, "%spush_verify%s", colors.param, colors.end);
+}
+
+static enum ofperr
+check_PUSH_VERIFY(const struct ofpact_push_verify *a OVS_UNUSED,
+                struct ofpact_check_params *cp)
+{
+    struct flow *flow = &cp->match->flow;
+    flow_push_verify_uninit(flow, NULL);
+    return 0;
+}
+
+/* Pop VERIFY label action. */
+
+static enum ofperr
+decode_OFPAT_RAW_POP_VERIFY(struct ofpbuf *out)
+{
+    ofpact_put_POP_VERIFY(out);
+    return 0;
+}
+
+static void
+encode_POP_VERIFY(const struct ofpact_null *null OVS_UNUSED,
+                enum ofp_version ofp_version OVS_UNUSED, struct ofpbuf *out)
+{
+    put_OFPAT_POP_VERIFY(out);
+}
+
+static char * OVS_WARN_UNUSED_RESULT
+parse_POP_VERIFY(const char *arg OVS_UNUSED,
+                 const struct ofpact_parse_params *pp)
+{
+    ofpact_put_POP_VERIFY(pp->ofpacts);
+    return NULL;
+}
+
+static void
+format_POP_VERIFY(const struct ofpact_null *a OVS_UNUSED,
+                  const struct ofpact_format_params *fp)
+{
+    ds_put_format(fp->s, "%spop_verify%s", colors.value, colors.end);
+}
+
+static enum ofperr
+check_POP_VERIFY(const struct ofpact_null *a OVS_UNUSED,
+                 const struct ofpact_check_params *cp OVS_UNUSED)
+{
+    flow_pop_verify(&cp->match->flow, NULL);
     return 0;
 }
 
@@ -7852,8 +8061,10 @@ ofpact_copy(struct ofpbuf *out, const struct ofpact *a)
 #define ACTION_SET_ORDER                        \
     SLOT(OFPACT_STRIP_VLAN)                     \
     SLOT(OFPACT_POP_MPLS)                       \
+    SLOT(OFPACT_POP_VERIFY)                     \
     SLOT(OFPACT_DECAP)                          \
     SLOT(OFPACT_ENCAP)                          \
+    SLOT(OFPACT_PUSH_VERIFY)                    \
     SLOT(OFPACT_PUSH_MPLS)                      \
     SLOT(OFPACT_PUSH_VLAN)                      \
     SLOT(OFPACT_DEC_TTL)                        \
@@ -7927,6 +8138,8 @@ action_set_classify(const struct ofpact *a)
     case OFPACT_SET_TUNNEL:
     case OFPACT_SET_VLAN_PCP:
     case OFPACT_SET_VLAN_VID:
+    case OFPACT_SET_VERIFY_PORT:
+    case OFPACT_SET_VERIFY_RULE:
         return ACTION_SLOT_SET_OR_MOVE;
 
     case OFPACT_BUNDLE:
@@ -8138,6 +8351,10 @@ ovs_instruction_type_from_ofpact_type(enum ofpact_type type,
     case OFPACT_DEC_MPLS_TTL:
     case OFPACT_PUSH_MPLS:
     case OFPACT_POP_MPLS:
+    case OFPACT_SET_VERIFY_PORT:
+    case OFPACT_SET_VERIFY_RULE:
+    case OFPACT_PUSH_VERIFY:
+    case OFPACT_POP_VERIFY:
     case OFPACT_SET_TUNNEL:
     case OFPACT_SET_QUEUE:
     case OFPACT_POP_QUEUE:
@@ -8883,6 +9100,10 @@ get_ofpact_map(enum ofp_version version)
         { OFPACT_SET_L4_SRC_PORT, 9 },
         { OFPACT_SET_L4_DST_PORT, 10 },
         { OFPACT_ENQUEUE, 11 },
+        { OFPACT_SET_VERIFY_PORT, 30 },
+        { OFPACT_SET_VERIFY_RULE, 31 },
+        { OFPACT_PUSH_VERIFY, 32 },
+        { OFPACT_POP_VERIFY, 33 },
         { 0, -1 },
     };
 
@@ -8913,6 +9134,10 @@ get_ofpact_map(enum ofp_version version)
         { OFPACT_GROUP, 22 },
         { OFPACT_SET_IP_TTL, 23 },
         { OFPACT_DEC_TTL, 24 },
+        { OFPACT_SET_VERIFY_PORT, 30 },
+        { OFPACT_SET_VERIFY_RULE, 31 },
+        { OFPACT_PUSH_VERIFY, 32 },
+        { OFPACT_POP_VERIFY, 33 },
         { 0, -1 },
     };
 
@@ -8932,6 +9157,10 @@ get_ofpact_map(enum ofp_version version)
         { OFPACT_SET_IP_TTL, 23 },
         { OFPACT_DEC_TTL, 24 },
         { OFPACT_SET_FIELD, 25 },
+        { OFPACT_SET_VERIFY_PORT, 30 },
+        { OFPACT_SET_VERIFY_RULE, 31 },
+        { OFPACT_PUSH_VERIFY, 32 },
+        { OFPACT_POP_VERIFY, 33 },
         /* OF1.3+ OFPAT_PUSH_PBB (26) not supported. */
         /* OF1.3+ OFPAT_POP_PBB (27) not supported. */
         { 0, -1 },
@@ -9072,6 +9301,10 @@ ofpact_outputs_to_port(const struct ofpact *ofpact, ofp_port_t port)
     case OFPACT_DEC_NSH_TTL:
     case OFPACT_CHECK_PKT_LARGER:
     case OFPACT_DELETE_FIELD:
+    case OFPACT_SET_VERIFY_PORT:
+    case OFPACT_SET_VERIFY_RULE:
+    case OFPACT_PUSH_VERIFY:
+    case OFPACT_POP_VERIFY:
     default:
         return false;
     }
