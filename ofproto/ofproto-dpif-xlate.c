@@ -6858,16 +6858,15 @@ do_xlate_actions(const struct ofpact *ofpacts, size_t ofpacts_len,
             break;
 
         case OFPACT_SET_VERIFY_PORT:
-            flow->verify_port = ofpact_get_SET_VERIFY_PORT(a)->verify_port;
+            flow->verify_hdr.port = ofpact_get_SET_VERIFY_PORT(a)->verify_port;
             break;
 
         case OFPACT_SET_VERIFY_RULE:
-            flow->verify_rule = ofpact_get_SET_VERIFY_RULE(a)->verify_rule;
+            flow->verify_hdr.rule = ofpact_get_SET_VERIFY_RULE(a)->verify_rule;
             break;
 
         case OFPACT_PUSH_VERIFY:
             flow_push_verify_uninit(flow, wc);
-            flow->verify_rule = 1;
             break;
 
         case OFPACT_POP_VERIFY:

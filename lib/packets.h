@@ -349,9 +349,10 @@ void compose_rarp(struct dp_packet *, const struct eth_addr);
 
 void eth_push_vlan(struct dp_packet *, ovs_be16 tpid, ovs_be16 tci);
 void eth_pop_vlan(struct dp_packet *);
-void eth_push_verify(struct dp_packet *, ovs_be32 port, ovs_be16 rule);
+void eth_push_verify(struct dp_packet *);
 void eth_pop_verify(struct dp_packet *);
-void eth_set_verify(struct dp_packet *, ovs_be32 port, ovs_be16 rule);
+void eth_set_verify_port(struct dp_packet *, ovs_be32 port);
+void eth_set_verify_rule(struct dp_packet *, ovs_be16 rule);
 
 const char *eth_from_hex(const char *hex, struct dp_packet **packetp);
 void eth_format_masked(const struct eth_addr ea,

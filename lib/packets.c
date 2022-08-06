@@ -240,15 +240,15 @@ eth_pop_vlan(struct dp_packet *packet)
 }
 
 void
-eth_push_verify(struct dp_packet *packet, ovs_be32 port, ovs_be16 rule)
+eth_push_verify(struct dp_packet *packet)
 {
     struct verify_eth_header *veh;
 
     veh = dp_packet_resize_l2(packet, VERIFY_HLEN);
     memmove(veh, (char *)veh + VERIFY_HLEN, 2 * ETH_ADDR_LEN);
     veh->veth_type = ETH_TYPE_PAZZ;
-    veh->veth_port = port;
-    veh->veth_rule = rule;
+    veh->veth_port = htonl(1);
+    veh->veth_rule = htons(1);
 }
 
 void
@@ -265,13 +265,23 @@ eth_pop_verify(struct dp_packet *packet)
 }
 
 void
-eth_set_verify(struct dp_packet *packet, ovs_be32 port, ovs_be16 rule)
+eth_set_verify_port(struct dp_packet *packet, ovs_be32 port)
 {
     struct verify_eth_header *veh = dp_packet_eth(packet);
 
     if (veh && dp_packet_size(packet) >= sizeof *veh
             && eth_type_verify(veh->veth_type)) {
         veh->veth_port = port;
+    }
+}
+
+void
+eth_set_verify_rule(struct dp_packet *packet, ovs_be16 rule)
+{
+    struct verify_eth_header *veh = dp_packet_eth(packet);
+
+    if (veh && dp_packet_size(packet) >= sizeof *veh
+            && eth_type_verify(veh->veth_type)) {
         veh->veth_rule = rule;
     }
 }

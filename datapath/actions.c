@@ -307,8 +307,7 @@ static int push_vlan(struct sk_buff *skb, struct sw_flow_key *key,
 			     ntohs(vlan->vlan_tci) & ~VLAN_CFI_MASK);
 }
 
-static int push_verify(struct sk_buff *skb, struct sw_flow_key *key,
-		     const struct ovs_action_push_verify *verify)
+static int push_verify(struct sk_buff *skb, struct sw_flow_key *key)
 {
     struct verify_hdr *new_verify;
 
@@ -318,7 +317,8 @@ static int push_verify(struct sk_buff *skb, struct sw_flow_key *key,
     skb_reset_mac_header(skb);
 
     new_verify = (struct verify_hdr *) (skb_mac_header(skb) + skb->mac_len);
-    new_verify->verify_rule = 1;
+    new_verify->verify_port = htonl(1);
+    new_verify->verify_rule = htons(1);
 
     skb_postpush_rcsum(skb, new_verify, VERIFY_HLEN);
 
@@ -367,8 +367,8 @@ static int pop_verify(struct sk_buff *skb, struct sw_flow_key *key)
     return 0;
 }
 
-static int set_verify(struct sk_buff *skb, struct sw_flow_key *flow_key,
-            const __be32 port, const __be16 rule)
+static int set_verify_port(struct sk_buff *skb, struct sw_flow_key *flow_key,
+            const __be32 port)
 {
     struct verify_hdr *new_verify;
     int err;
@@ -378,10 +378,25 @@ static int set_verify(struct sk_buff *skb, struct sw_flow_key *flow_key,
 
     new_verify = (struct verify_hdr *) (skb_mac_header(skb) + skb->mac_len);
 
-    new_verify->verify_type = ETH_PAZZ;
+    new_verify->verify_type = ETH_TYPE_PAZZ;
     new_verify->verify_port = port;
-    new_verify->verify_rule = rule;
     flow_key->vhead.port = port;
+    return 0;
+}
+
+static int set_verify_rule(struct sk_buff *skb, struct sw_flow_key *flow_key,
+            const __be16 rule)
+{
+    struct verify_hdr *new_verify;
+    int err;
+    err = skb_ensure_writable(skb, skb->mac_len + VERIFY_HLEN);
+    if (unlikely(err))
+        return err;
+
+    new_verify = (struct verify_hdr *) (skb_mac_header(skb) + skb->mac_len);
+
+    new_verify->verify_type = ETH_TYPE_PAZZ;
+    new_verify->verify_rule = rule;
     flow_key->vhead.rule = rule;
     return 0;
 }
@@ -1199,10 +1214,12 @@ static int execute_set_action(struct sk_buff *skb,
 		ovs_dst_hold((struct dst_entry *)tun->tun_dst);
 		ovs_skb_dst_set(skb, (struct dst_entry *)tun->tun_dst);
 		return 0;
+    /*
     } else if (nla_type(a) == OVS_KEY_ATTR_VERIFY) {
 		struct ovs_key_verify *verify = nla_data(a);
         err = set_verify(skb, flow_key, verify->verify_port, verify->verify_rule);
         return 0;
+    */
     }
 
 
@@ -1409,8 +1426,16 @@ static int do_execute_actions(struct datapath *dp, struct sk_buff *skb,
 			err = pop_vlan(skb, key);
 			break;
 
+		case OVS_ACTION_ATTR_SET_VERIFY_PORT:
+			err = set_verify_port(skb, key, nla_get_be32(a));
+			break;
+
+		case OVS_ACTION_ATTR_SET_VERIFY_RULE:
+			err = set_verify_rule(skb, key, nla_get_be16(a));
+			break;
+
 		case OVS_ACTION_ATTR_PUSH_VERIFY:
-			err = push_verify(skb, key, nla_data(a));
+			err = push_verify(skb, key);
 			break;
 
 		case OVS_ACTION_ATTR_POP_VERIFY:

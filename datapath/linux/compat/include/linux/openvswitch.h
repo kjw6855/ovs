@@ -364,7 +364,6 @@ enum ovs_key_attr {
 	OVS_KEY_ATTR_MPLS,      /* array of struct ovs_key_mpls.
 				 * The implementation may restrict
 				 * the accepted length of the array. */
-    //OVS_KEY_ATTR_VERIFY,
 	OVS_KEY_ATTR_CT_STATE,	/* u32 bitmask of OVS_CS_F_* */
 	OVS_KEY_ATTR_CT_ZONE,	/* u16 connection tracking zone. */
 	OVS_KEY_ATTR_CT_MARK,	/* u32 connection tracking mark */
@@ -384,7 +383,6 @@ enum ovs_key_attr {
 	OVS_KEY_ATTR_ND_EXTENSIONS, /* struct ovs_key_nd_extensions */
 #endif
 
-    OVS_KEY_ATTR_VERIFY,
 	__OVS_KEY_ATTR_MAX
 };
 
@@ -1012,7 +1010,9 @@ enum ovs_action_attr {
 	OVS_ACTION_ATTR_SET,          /* One nested OVS_KEY_ATTR_*. */
 	OVS_ACTION_ATTR_PUSH_VLAN,    /* struct ovs_action_push_vlan. */
 	OVS_ACTION_ATTR_POP_VLAN,     /* No argument. */
-	OVS_ACTION_ATTR_PUSH_VERIFY,  /* struct ovs_action_push_verify. */
+	OVS_ACTION_ATTR_SET_VERIFY_PORT,  /* u32 port number. */
+	OVS_ACTION_ATTR_SET_VERIFY_RULE,  /* u16 rule number. */
+	OVS_ACTION_ATTR_PUSH_VERIFY,  /* No argument. */
 	OVS_ACTION_ATTR_POP_VERIFY,   /* No argument. */
 	OVS_ACTION_ATTR_SAMPLE,       /* Nested OVS_SAMPLE_ATTR_*. */
 	OVS_ACTION_ATTR_RECIRC,       /* u32 recirc_id. */

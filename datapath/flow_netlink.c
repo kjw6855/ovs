@@ -97,6 +97,8 @@ static bool actions_may_change_flow(const struct nlattr *actions)
 		case OVS_ACTION_ATTR_SET_MASKED:
 		case OVS_ACTION_ATTR_METER:
 		case OVS_ACTION_ATTR_CHECK_PKT_LEN:
+		case OVS_ACTION_ATTR_SET_VERIFY_PORT:
+		case OVS_ACTION_ATTR_SET_VERIFY_RULE:
 		default:
 			return true;
 		}
@@ -442,7 +444,7 @@ static const struct ovs_len_tbl ovs_key_lens[OVS_KEY_ATTR_MAX + 1] = {
 	[OVS_KEY_ATTR_TUNNEL]	 = { .len = OVS_ATTR_NESTED,
 				     .next = ovs_tunnel_key_lens, },
 	[OVS_KEY_ATTR_MPLS]	 = { .len = OVS_ATTR_VARIABLE },
-	[OVS_KEY_ATTR_VERIFY]	 = { .len = sizeof(struct ovs_key_verify) },
+	//[OVS_KEY_ATTR_VERIFY]	 = { .len = sizeof(struct ovs_key_verify) },
 	[OVS_KEY_ATTR_CT_STATE]	 = { .len = sizeof(u32) },
 	[OVS_KEY_ATTR_CT_ZONE]	 = { .len = sizeof(u16) },
 	[OVS_KEY_ATTR_CT_MARK]	 = { .len = sizeof(u32) },
@@ -3006,6 +3008,10 @@ static int __ovs_nla_copy_actions(struct net *net, const struct nlattr *attr,
 			[OVS_ACTION_ATTR_METER] = sizeof(u32),
 			[OVS_ACTION_ATTR_CLONE] = (u32)-1,
 			[OVS_ACTION_ATTR_CHECK_PKT_LEN] = (u32)-1,
+			[OVS_ACTION_ATTR_SET_VERIFY_PORT] = sizeof(u32),
+			[OVS_ACTION_ATTR_SET_VERIFY_RULE] = sizeof(__be16),
+			[OVS_ACTION_ATTR_PUSH_VERIFY] = 0,
+			[OVS_ACTION_ATTR_POP_VERIFY] = 0,
 		};
 		const struct ovs_action_push_vlan *vlan;
 		int type = nla_type(a);
@@ -3069,6 +3075,13 @@ static int __ovs_nla_copy_actions(struct net *net, const struct nlattr *attr,
 				return -EINVAL;
 			vlan_tci = vlan->vlan_tci;
 			break;
+
+        /* PAZZ: do not check */
+        case OVS_ACTION_ATTR_SET_VERIFY_PORT:
+        case OVS_ACTION_ATTR_SET_VERIFY_RULE:
+        case OVS_ACTION_ATTR_PUSH_VERIFY:
+        case OVS_ACTION_ATTR_POP_VERIFY:
+            break;
 
 		case OVS_ACTION_ATTR_RECIRC:
 			break;

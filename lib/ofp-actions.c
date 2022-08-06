@@ -262,16 +262,16 @@ enum ofp_raw_action_type {
     /* OF1.5+(29): uint32_t. */
     OFPAT_RAW15_METER,
 
-    /* OF1.0+(30): ovs_be32. */
+    /* OF1.0(30), OF1.1(30), OF1.2+(30): ovs_be32. */
     OFPAT_RAW_SET_VERIFY_PORT,
 
-    /* OF1.0+(31): ovs_be16. */
+    /* OF1.0(31), OF1.1(31), OF1.2+(31): ovs_be16. */
     OFPAT_RAW_SET_VERIFY_RULE,
 
-    /* OF1.0+(32): void. */
+    /* OF1.0(32), OF1.1(32), OF1.2+(32): void. */
     OFPAT_RAW_PUSH_VERIFY,
 
-    /* OF1.0+(33): void. */
+    /* OF1.0(33), OF1.1(33), OF1.2+(33): void. */
     OFPAT_RAW_POP_VERIFY,
 
 /* ## ------------------------- ## */
@@ -4132,10 +4132,12 @@ static enum ofperr
 check_SET_VERIFY_PORT(const struct ofpact_verify_port *a OVS_UNUSED,
                 struct ofpact_check_params *cp)
 {
-    ovs_be16 dl_type = get_dl_type(&cp->match->flow);
-    if (!eth_type_verify(dl_type)) {
+    /*
+    struct flow *flow = &cp->match->flow;
+    if (flow->verify_port == 0) {
         inconsistent_match(&cp->usable_protocols);
     }
+    */
     return 0;
 }
 
@@ -4178,19 +4180,20 @@ static void
 format_SET_VERIFY_RULE(const struct ofpact_verify_rule *a,
                  const struct ofpact_format_params *fp)
 {
-    ds_put_format(fp->s, "%sset_verify_rule(%s%"PRIu16"%s)%s",
-                  colors.paren, colors.end, ntohl(a->verify_rule),
-                  colors.paren, colors.end);
+    ds_put_format(fp->s, "%sset_verify_rule:%s%"PRIu16,
+                  colors.param, colors.end, a->verify_rule);
 }
 
 static enum ofperr
 check_SET_VERIFY_RULE(const struct ofpact_verify_rule *a OVS_UNUSED,
                 struct ofpact_check_params *cp)
 {
-    ovs_be16 dl_type = get_dl_type(&cp->match->flow);
-    if (!eth_type_verify(dl_type)) {
+    /*
+    struct flow *flow = &cp->match->flow;
+    if (flow->verify_port == 0) {
         inconsistent_match(&cp->usable_protocols);
     }
+    */
     return 0;
 }
 
@@ -4199,14 +4202,12 @@ check_SET_VERIFY_RULE(const struct ofpact_verify_rule *a OVS_UNUSED,
 static enum ofperr
 decode_OFPAT_RAW_PUSH_VERIFY(struct ofpbuf *out)
 {
-    struct ofpact_push_verify *push_verify;
-    push_verify = ofpact_put_PUSH_VERIFY(out);
-    push_verify->ethertype = ETH_TYPE_PAZZ;
+    ofpact_put_PUSH_VERIFY(out);
     return 0;
 }
 
 static void
-encode_PUSH_VERIFY(const struct ofpact_push_verify *push_verify OVS_UNUSED,
+encode_PUSH_VERIFY(const struct ofpact_null *null OVS_UNUSED,
                  enum ofp_version ofp_version OVS_UNUSED, struct ofpbuf *out)
 {
     put_OFPAT_PUSH_VERIFY(out);
@@ -4215,22 +4216,20 @@ encode_PUSH_VERIFY(const struct ofpact_push_verify *push_verify OVS_UNUSED,
 static char * OVS_WARN_UNUSED_RESULT
 parse_PUSH_VERIFY(char *arg, const struct ofpact_parse_params *pp)
 {
-    struct ofpact_push_verify *push_verify;
 
-    push_verify = ofpact_put_PUSH_VERIFY(pp->ofpacts);
-    push_verify->ethertype = htons(ETH_TYPE_PAZZ);
+    ofpact_put_PUSH_VERIFY(pp->ofpacts);
     return NULL;
 }
 
 static void
-format_PUSH_VERIFY(const struct ofpact_push_verify *push_verify,
+format_PUSH_VERIFY(const struct ofpact_null *a OVS_UNUSED,
                  const struct ofpact_format_params *fp)
 {
     ds_put_format(fp->s, "%spush_verify%s", colors.param, colors.end);
 }
 
 static enum ofperr
-check_PUSH_VERIFY(const struct ofpact_push_verify *a OVS_UNUSED,
+check_PUSH_VERIFY(const struct ofpact_null *a OVS_UNUSED,
                 struct ofpact_check_params *cp)
 {
     struct flow *flow = &cp->match->flow;

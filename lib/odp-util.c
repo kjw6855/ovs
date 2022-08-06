@@ -129,7 +129,9 @@ odp_action_len(uint16_t type)
     case OVS_ACTION_ATTR_POP_VLAN: return 0;
     case OVS_ACTION_ATTR_PUSH_MPLS: return sizeof(struct ovs_action_push_mpls);
     case OVS_ACTION_ATTR_POP_MPLS: return sizeof(ovs_be16);
-    case OVS_ACTION_ATTR_PUSH_VERIFY: return sizeof(struct ovs_action_push_verify);
+    case OVS_ACTION_ATTR_SET_VERIFY_PORT: return sizeof(uint32_t);
+    case OVS_ACTION_ATTR_SET_VERIFY_RULE: return sizeof(uint16_t);
+    case OVS_ACTION_ATTR_PUSH_VERIFY: return 0;
     case OVS_ACTION_ATTR_POP_VERIFY: return 0;
     case OVS_ACTION_ATTR_RECIRC: return sizeof(uint32_t);
     case OVS_ACTION_ATTR_HASH: return sizeof(struct ovs_action_hash);
@@ -189,7 +191,7 @@ ovs_key_attr_to_string(enum ovs_key_attr attr, char *namebuf, size_t bufsize)
     case OVS_KEY_ATTR_ND: return "nd";
     case OVS_KEY_ATTR_ND_EXTENSIONS: return "nd_ext";
     case OVS_KEY_ATTR_MPLS: return "mpls";
-    case OVS_KEY_ATTR_VERIFY: return "verify";
+    //case OVS_KEY_ATTR_VERIFY: return "verify";
     case OVS_KEY_ATTR_DP_HASH: return "dp_hash";
     case OVS_KEY_ATTR_RECIRC_ID: return "recirc_id";
     case OVS_KEY_ATTR_PACKET_TYPE: return "packet_type";
@@ -1228,6 +1230,14 @@ format_odp_action(struct ds *ds, const struct nlattr *a,
     case OVS_ACTION_ATTR_POP_MPLS: {
         ovs_be16 ethertype = nl_attr_get_be16(a);
         ds_put_format(ds, "pop_mpls(eth_type=0x%"PRIx16")", ntohs(ethertype));
+        break;
+    }
+    case OVS_ACTION_ATTR_SET_VERIFY_PORT: {
+        ds_put_format(ds, "set_verify_port(%"PRIu32")", nl_attr_get_u32(a));
+        break;
+    }
+    case OVS_ACTION_ATTR_SET_VERIFY_RULE: {
+        ds_put_format(ds, "set_verify_port(%"PRIu16")", nl_attr_get_u16(a));
         break;
     }
     case OVS_ACTION_ATTR_PUSH_VERIFY: {
@@ -2696,7 +2706,7 @@ const struct attr_len_tbl ovs_flow_key_attr_lens[OVS_KEY_ATTR_MAX + 1] = {
     [OVS_KEY_ATTR_VLAN]      = { .len = 2 },
     [OVS_KEY_ATTR_ETHERTYPE] = { .len = 2 },
     [OVS_KEY_ATTR_MPLS]      = { .len = ATTR_LEN_VARIABLE },
-    [OVS_KEY_ATTR_VERIFY]    = { .len = sizeof(struct ovs_key_verify) },
+    //[OVS_KEY_ATTR_VERIFY]    = { .len = sizeof(struct ovs_key_verify) },
     [OVS_KEY_ATTR_IPV4]      = { .len = sizeof(struct ovs_key_ipv4) },
     [OVS_KEY_ATTR_IPV6]      = { .len = sizeof(struct ovs_key_ipv6) },
     [OVS_KEY_ATTR_TCP]       = { .len = sizeof(struct ovs_key_tcp) },
@@ -3234,7 +3244,7 @@ odp_mask_is_constant__(enum ovs_key_attr attr, const void *mask, size_t size,
     case OVS_KEY_ATTR_UNSPEC:
     case OVS_KEY_ATTR_ENCAP:
     case __OVS_KEY_ATTR_MAX:
-    case OVS_KEY_ATTR_VERIFY:
+    //case OVS_KEY_ATTR_VERIFY:
     default:
         return false;
 
@@ -4255,12 +4265,14 @@ format_odp_key_attr__(const struct nlattr *a, const struct nlattr *ma,
         break;
     }
 
+    /*
     case OVS_KEY_ATTR_VERIFY: {
         const struct ovs_key_verify *verify_key = nl_attr_get(a);
         ds_put_format(ds, "%"PRIu32, ntohs(verify_key->verify_port));
         ds_put_format(ds, "%"PRIu16, ntohs(verify_key->verify_rule));
         break;
     }
+    */
 
     case OVS_KEY_ATTR_ETHERTYPE:
         ds_put_format(ds, "0x%04"PRIx16, ntohs(nl_attr_get_be16(a)));
@@ -6318,6 +6330,7 @@ odp_flow_key_from_flow__(const struct odp_flow_key_parms *parms,
     } else if (flow->dl_type == htons(ETH_TYPE_NSH)) {
         nsh_key_to_attr(buf, &data->nsh, NULL, 0, export_mask);
 
+    /*
     } else if (eth_type_verify(flow->dl_type)) {
         struct ovs_key_verify *verify_key;
 
@@ -6325,6 +6338,7 @@ odp_flow_key_from_flow__(const struct odp_flow_key_parms *parms,
                                            sizeof *verify_key);
         verify_key->verify_port = flow->verify_port;
         verify_key->verify_rule = flow->verify_rule;
+    */
     }
 
     if (is_ip_any(flow) && !(flow->nw_frag & FLOW_NW_FRAG_LATER)) {
@@ -6586,7 +6600,7 @@ odp_key_to_dp_packet(const struct nlattr *key, size_t key_len,
         case OVS_KEY_ATTR_SCTP:
         case OVS_KEY_ATTR_TCP_FLAGS:
         case OVS_KEY_ATTR_MPLS:
-        case OVS_KEY_ATTR_VERIFY:
+        //case OVS_KEY_ATTR_VERIFY:
         case OVS_KEY_ATTR_PACKET_TYPE:
         case OVS_KEY_ATTR_NSH:
         case __OVS_KEY_ATTR_MAX:
@@ -7880,6 +7894,29 @@ commit_vlan_action(const struct flow* flow, struct flow *base,
     memcpy(base->vlans, flow->vlans, sizeof(base->vlans));
 }
 
+static void
+commit_verify_action(const struct flow *flow, struct flow *base,
+                     struct ofpbuf *odp_actions)
+{
+    // commit PAZZ
+    bool has_flow_verify = eth_type_verify(flow->verify_hdr.type);
+    bool has_base_verify = eth_type_verify(base->verify_hdr.type);
+
+    if (has_flow_verify) {
+        if (!has_base_verify)
+            nl_msg_put_flag(odp_actions, OVS_ACTION_ATTR_PUSH_VERIFY);
+
+        if (flow->verify_hdr.rule > 0) {
+            nl_msg_put_unspec(odp_actions, OVS_ACTION_ATTR_SET_VERIFY_PORT, &flow->verify_hdr.port, sizeof(uint32_t));
+            nl_msg_put_unspec(odp_actions, OVS_ACTION_ATTR_SET_VERIFY_RULE, &flow->verify_hdr.rule, sizeof(uint16_t));
+        }
+    } else if (has_base_verify) {
+        nl_msg_put_flag(odp_actions, OVS_ACTION_ATTR_POP_VERIFY);
+    }
+
+    base->verify_hdr.qtag = flow->verify_hdr.qtag;
+}
+
 /* Wildcarding already done at action translation time. */
 static void
 commit_mpls_action(const struct flow *flow, struct flow *base,
@@ -8673,6 +8710,7 @@ commit_odp_actions(const struct flow *flow, struct flow *base,
     commit_vlan_action(flow, base, odp_actions, wc);
     commit_set_priority_action(flow, base, odp_actions, wc, use_masked);
     commit_set_pkt_mark_action(flow, base, odp_actions, wc, use_masked);
+    commit_verify_action(flow, base, odp_actions);
 
     return slow1 ? slow1 : slow2;
 }

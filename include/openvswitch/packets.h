@@ -80,6 +80,15 @@ union flow_vlan_hdr {
     };
 };
 
+union flow_verify_hdr {
+    ovs_be64 qtag;
+    struct {
+        ovs_be16 type;  /* ETH_TYPE_PAZZ */
+        ovs_be32 port;
+        ovs_be16 rule;
+    };
+};
+
 struct ovs_key_nsh {
     uint8_t flags;
     uint8_t ttl;

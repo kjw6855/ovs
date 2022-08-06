@@ -343,7 +343,7 @@ parse_vlan(const void **datap, size_t *sizep, union flow_vlan_hdr *vlan_hdrs)
 {
     const ovs_be16 *eth_type;
 
-    data_pull(datap, sizep, ETH_ADDR_LEN * 2);
+    //data_pull(datap, sizep, ETH_ADDR_LEN * 2);
 
     eth_type = *datap;
 
@@ -393,6 +393,28 @@ parse_ethertype(const void **datap, size_t *sizep)
     }
 
     return htons(FLOW_DL_TYPE_NONE);
+}
+
+static inline ALWAYS_INLINE size_t
+parse_verify(const void **datap, size_t *sizep, union flow_verify_hdr verify_hdr)
+{
+    const ovs_be16 *eth_type;
+
+    data_pull(datap, sizep, ETH_ADDR_LEN * 2);
+
+    eth_type = *datap;
+
+    if (eth_type_verify(*eth_type)) {
+        data_pull(datap, sizep, sizeof(ovs_be16));
+        const ovs_16aligned_be32 *qp = data_pull(datap, sizep, sizeof *qp);
+        const ovs_be16 *dp = data_pull(datap, sizep, sizeof *dp);
+        verify_hdr.type = htons(ETH_TYPE_PAZZ);
+        verify_hdr.port = get_16aligned_be32(qp);
+        verify_hdr.rule = *dp;
+        return 1;
+    }
+
+    return 0;
 }
 
 /* Returns 'true' if the packet is an ND packet. In that case the '*nd_target'
@@ -809,6 +831,11 @@ miniflow_extract(struct dp_packet *packet, struct miniflow *dst)
             ASSERT_SEQUENTIAL(dl_dst, dl_src);
             miniflow_push_macs(mf, dl_dst, data);
 
+            /* PAZZ */
+            union flow_verify_hdr verify;
+            memset(&verify, 0, sizeof(union flow_verify_hdr));
+            size_t num_verify = parse_verify(&data, &size, verify);
+
             /* VLAN */
             union flow_vlan_hdr vlans[FLOW_MAX_VLAN_HEADERS];
             size_t num_vlans = parse_vlan(&data, &size, vlans);
@@ -818,6 +845,12 @@ miniflow_extract(struct dp_packet *packet, struct miniflow *dst)
             miniflow_pad_to_64(mf, dl_type);
             if (num_vlans > 0) {
                 miniflow_push_words_32(mf, vlans, vlans, num_vlans);
+            }
+
+            if (num_verify > 0) {
+                miniflow_push_words(mf, verify_hdr, &verify, 1);
+                //miniflow_push_be32(mf, verify_port, verify.port);
+                //miniflow_push_be16(mf, verify_rule, verify.rule);
             }
 
         }
@@ -1076,8 +1109,10 @@ miniflow_extract(struct dp_packet *packet, struct miniflow *dst)
 static ovs_be16
 parse_dl_type(const void **datap, size_t *sizep)
 {
+    union flow_verify_hdr verify;
     union flow_vlan_hdr vlans[FLOW_MAX_VLAN_HEADERS];
 
+    parse_verify(datap, sizep, verify);
     parse_vlan(datap, sizep, vlans);
 
     return parse_ethertype(datap, sizep);
@@ -2763,15 +2798,15 @@ flow_push_vlan_uninit(struct flow *flow, struct flow_wildcards *wc)
 void
 flow_pop_verify(struct flow *flow, struct flow_wildcards *wc)
 {
-    flow->verify_port = 0;
-    flow->verify_rule = 0;
+    flow->verify_hdr.type = 0;
+    flow->verify_hdr.port = 0;
+    flow->verify_hdr.rule = 0;
 }
 
 void
 flow_push_verify_uninit(struct flow *flow, struct flow_wildcards *wc)
 {
-    flow->verify_port = 1;
-    flow->verify_rule = 1;  // TODO: hash
+    flow->verify_hdr.type = htons(ETH_TYPE_PAZZ);
 }
 
 /* Returns the number of MPLS LSEs present in 'flow'
@@ -3223,9 +3258,10 @@ flow_compose(struct dp_packet *p, const struct flow *flow,
         return;
     }
 
-    if (flow->verify_rule > 0) {
-        eth_push_verify(p, flow->verify_port,
-                        flow->verify_rule);
+    if (eth_type_verify(flow->verify_hdr.type)) {
+        eth_push_verify(p);
+        eth_set_verify_port(p, flow->verify_hdr.port);
+        eth_set_verify_rule(p, flow->verify_hdr.rule);
     }
 
     for (int encaps = FLOW_MAX_VLAN_HEADERS - 1; encaps >= 0; encaps--) {

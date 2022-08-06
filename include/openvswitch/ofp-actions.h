@@ -97,7 +97,7 @@ struct vl_mff_map;
     OFPACT(DELETE_FIELD,    ofpact_delete_field, ofpact, "delete_field") \
     OFPACT(SET_VERIFY_PORT, ofpact_verify_port, ofpact, "set_verify_port")\
     OFPACT(SET_VERIFY_RULE, ofpact_verify_rule, ofpact, "set_verify_rule")\
-    OFPACT(PUSH_VERIFY,     ofpact_push_verify, ofpact, "push_verify")  \
+    OFPACT(PUSH_VERIFY,     ofpact_null,        ofpact, "push_verify")  \
     OFPACT(POP_VERIFY,      ofpact_null,        ofpact, "pop_verify")   \
                                                                         \
     /* Generic encap & decap */                                         \
@@ -471,14 +471,6 @@ struct ofpact_verify_rule {
     OFPACT_PADDED_MEMBERS(
         struct ofpact ofpact;
         ovs_be16 verify_rule;
-    );
-};
-
-/* OFPACT_PUSH_VERIFY */
-struct ofpact_push_verify {
-    OFPACT_PADDED_MEMBERS(
-        struct ofpact ofpact;
-        ovs_be16 ethertype;
     );
 };
 

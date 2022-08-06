@@ -1000,7 +1000,7 @@ sflow_read_set_action(const struct nlattr *attr,
     case OVS_KEY_ATTR_IN_PORT:
     case OVS_KEY_ATTR_ETHERNET:
     case OVS_KEY_ATTR_VLAN:
-    case OVS_KEY_ATTR_VERIFY:
+    //case OVS_KEY_ATTR_VERIFY:
         break;
 
     case OVS_KEY_ATTR_MPLS: {
@@ -1197,6 +1197,8 @@ dpif_sflow_read_actions(const struct flow *flow,
              */
             break;
 
+        case OVS_ACTION_ATTR_SET_VERIFY_PORT:
+        case OVS_ACTION_ATTR_SET_VERIFY_RULE:
         case OVS_ACTION_ATTR_PUSH_VERIFY:
         case OVS_ACTION_ATTR_POP_VERIFY:
             break;
