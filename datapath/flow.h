@@ -93,11 +93,11 @@ struct sw_flow_key {
 	struct {
 		u8     src[ETH_ALEN];	/* Ethernet source address. */
 		u8     dst[ETH_ALEN];	/* Ethernet destination address. */
+        //struct verify_head vhead;
 		struct vlan_head vlan;
 		struct vlan_head cvlan;
 		__be16 type;		/* Ethernet frame type. */
 	} eth;
-    struct verify_head vhead;
 	/* Filling a hole of two bytes. */
 	u8 ct_state;
 	u8 ct_orig_proto;		/* CT original direction tuple IP

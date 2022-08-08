@@ -246,7 +246,7 @@ eth_push_verify(struct dp_packet *packet)
 
     veh = dp_packet_resize_l2(packet, VERIFY_HLEN);
     memmove(veh, (char *)veh + VERIFY_HLEN, 2 * ETH_ADDR_LEN);
-    veh->veth_type = ETH_TYPE_PAZZ;
+    veh->veth_type = htons(ETH_TYPE_PAZZ);
     veh->veth_port = htonl(1);
     veh->veth_rule = htons(1);
 }

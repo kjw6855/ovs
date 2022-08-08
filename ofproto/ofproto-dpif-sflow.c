@@ -1197,8 +1197,8 @@ dpif_sflow_read_actions(const struct flow *flow,
              */
             break;
 
-        case OVS_ACTION_ATTR_SET_VERIFY_PORT:
-        case OVS_ACTION_ATTR_SET_VERIFY_RULE:
+        case OVS_ACTION_ATTR_VERIFY_PORT:
+        case OVS_ACTION_ATTR_VERIFY_RULE:
         case OVS_ACTION_ATTR_PUSH_VERIFY:
         case OVS_ACTION_ATTR_POP_VERIFY:
             break;

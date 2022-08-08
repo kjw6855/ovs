@@ -1260,8 +1260,8 @@ dpif_execute_helper_cb(void *aux_, struct dp_packet_batch *packets_,
     case OVS_ACTION_ATTR_POP_VLAN:
     case OVS_ACTION_ATTR_PUSH_MPLS:
     case OVS_ACTION_ATTR_POP_MPLS:
-    case OVS_ACTION_ATTR_SET_VERIFY_PORT:
-    case OVS_ACTION_ATTR_SET_VERIFY_RULE:
+    case OVS_ACTION_ATTR_VERIFY_PORT:
+    case OVS_ACTION_ATTR_VERIFY_RULE:
     case OVS_ACTION_ATTR_PUSH_VERIFY:
     case OVS_ACTION_ATTR_POP_VERIFY:
     case OVS_ACTION_ATTR_SET:

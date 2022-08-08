@@ -43,6 +43,7 @@
 #include "gso.h"
 #include "vport.h"
 #include "flow_netlink.h"
+#include "verify.h"
 
 static int do_execute_actions(struct datapath *dp, struct sk_buff *skb,
 			      struct sw_flow_key *key,
@@ -311,22 +312,33 @@ static int push_verify(struct sk_buff *skb, struct sw_flow_key *key)
 {
     struct verify_hdr *new_verify;
 
+    if (skb_cow_head(skb, VERIFY_HLEN) < 0)
+        return -ENOMEM;
+
     skb_push(skb, VERIFY_HLEN);
     memmove(skb_mac_header(skb) - VERIFY_HLEN, skb_mac_header(skb),
-            skb->mac_len);
-    skb_reset_mac_header(skb);
+            ETH_ALEN * 2);
+    skb->mac_header -= VERIFY_HLEN;
+    //skb_reset_mac_header(skb);
 
-    new_verify = (struct verify_hdr *) (skb_mac_header(skb) + skb->mac_len);
-    new_verify->verify_port = htonl(1);
+    new_verify = (struct verify_hdr *) (skb_mac_header(skb) + ETH_ALEN * 2);
+    new_verify->eth_type = htons(ETH_TYPE_PAZZ);
+    new_verify->verify_port = htonl((uint32_t) 1);
     new_verify->verify_rule = htons(1);
 
-    skb_postpush_rcsum(skb, new_verify, VERIFY_HLEN);
+    skb->mac_len += VERIFY_HLEN;
+    //new_verify->eth_type = skb->protocol;    // original type
 
-    if (ovs_key_mac_proto(key) == MAC_PROTO_ETHERNET)
-        update_ethertype(skb, eth_hdr(skb), ETH_TYPE_PAZZ);
-    skb->protocol = ETH_TYPE_PAZZ;
+    //skb_postpush_rcsum(skb, skb_mac_header(skb) + ETH_ALEN * 2, VERIFY_HLEN);
+    //skb->protocol = htons(ETH_TYPE_PAZZ);
 
-    invalidate_flow_key(key);
+    if (skb->ip_summed == CHECKSUM_COMPLETE) {
+        skb->csum = csum_add(skb->csum, csum_partial(skb->data
+                    + (2 * ETH_ALEN), VERIFY_HLEN, 0));
+    }
+
+    //invalidate_flow_key(key);
+
     return 0;
 }
 
@@ -335,35 +347,31 @@ static int pop_verify(struct sk_buff *skb, struct sw_flow_key *key)
     struct verify_hdr *new_verify;
     int err;
 
-    err = skb_ensure_writable(skb, skb->mac_len + VERIFY_HLEN);
+    if (unlikely(skb->protocol == htons(ETH_TYPE_PAZZ))) {
+        return 0;
+    }
+
+    err = skb_ensure_writable(skb, ETH_HLEN + VERIFY_HLEN);
     if (unlikely(err))
         return err;
 
-    new_verify = (struct verify_hdr *) (skb_mac_header(skb) + skb->mac_len);
-    skb_postpull_rcsum(skb, new_verify, VERIFY_HLEN);
+    // get original ethernet
+    new_verify = (struct verify_hdr *) (skb_mac_header(skb) + ETH_ALEN * 2);
+
+    skb_postpull_rcsum(skb, skb_mac_header(skb) + ETH_ALEN * 2, VERIFY_HLEN);
 
     memmove(skb_mac_header(skb) + VERIFY_HLEN, skb_mac_header(skb),
             skb->mac_len);
 
     __skb_pull(skb, VERIFY_HLEN);
-    skb_reset_mac_header(skb);
-    skb_set_network_header(skb, skb->mac_len);
 
-    if (ovs_key_mac_proto(key) == MAC_PROTO_ETHERNET) {
-        struct ethhdr *hdr;
-        struct verify_hdr *verify_hdr;
+    //skb_reset_mac_header(skb);
+    skb->mac_header += VERIFY_HLEN;
+    skb->mac_len -= VERIFY_HLEN;
 
-        /* mpls_hdr() is used to locate the ethertype
-         * field correctly in the presence of VLAN tags.
-         */
-        verify_hdr = (struct verify_hdr *) (skb_mac_header(skb) + skb->mac_len);
-        hdr = (struct ethhdr *)((void*)verify_hdr - ETH_HLEN);
-        update_ethertype(skb, hdr, ethertype);
-    }
-    if (eth_p_mpls(skb->protocol))
-        skb->protocol = ethertype;
+    //key->mac_proto = MAC_PROTO_ETHERNET;
+    //invalidate_flow_key(key);
 
-    invalidate_flow_key(key);
     return 0;
 }
 
@@ -372,15 +380,17 @@ static int set_verify_port(struct sk_buff *skb, struct sw_flow_key *flow_key,
 {
     struct verify_hdr *new_verify;
     int err;
-    err = skb_ensure_writable(skb, skb->mac_len + VERIFY_HLEN);
+    err = skb_ensure_writable(skb, ETH_HLEN + VERIFY_HLEN);
     if (unlikely(err))
         return err;
 
-    new_verify = (struct verify_hdr *) (skb_mac_header(skb) + skb->mac_len);
+	skb_postpull_rcsum(skb, skb_mac_header(skb) + ETH_ALEN * 2, VERIFY_HLEN);
 
-    new_verify->verify_type = ETH_TYPE_PAZZ;
+    new_verify = (struct verify_hdr *) (skb_mac_header(skb) + ETH_ALEN * 2);
     new_verify->verify_port = port;
-    flow_key->vhead.port = port;
+
+	skb_postpush_rcsum(skb, eth_hdr(skb) + ETH_ALEN * 2, VERIFY_HLEN);
+
     return 0;
 }
 
@@ -389,15 +399,18 @@ static int set_verify_rule(struct sk_buff *skb, struct sw_flow_key *flow_key,
 {
     struct verify_hdr *new_verify;
     int err;
-    err = skb_ensure_writable(skb, skb->mac_len + VERIFY_HLEN);
+
+    err = skb_ensure_writable(skb, ETH_HLEN + VERIFY_HLEN);
     if (unlikely(err))
         return err;
 
-    new_verify = (struct verify_hdr *) (skb_mac_header(skb) + skb->mac_len);
+    skb_postpull_rcsum(skb, skb_mac_header(skb) + ETH_ALEN * 2, VERIFY_HLEN);
 
-    new_verify->verify_type = ETH_TYPE_PAZZ;
+    new_verify = (struct verify_hdr *) (skb_mac_header(skb) + ETH_ALEN * 2);
     new_verify->verify_rule = rule;
-    flow_key->vhead.rule = rule;
+
+    skb_postpush_rcsum(skb, eth_hdr(skb) + ETH_ALEN * 2, VERIFY_HLEN);
+
     return 0;
 }
 
@@ -1426,19 +1439,23 @@ static int do_execute_actions(struct datapath *dp, struct sk_buff *skb,
 			err = pop_vlan(skb, key);
 			break;
 
-		case OVS_ACTION_ATTR_SET_VERIFY_PORT:
+		case OVS_ACTION_ATTR_VERIFY_PORT:
+            pr_warn("verify port");
 			err = set_verify_port(skb, key, nla_get_be32(a));
 			break;
 
-		case OVS_ACTION_ATTR_SET_VERIFY_RULE:
+		case OVS_ACTION_ATTR_VERIFY_RULE:
+            pr_warn("verify rule");
 			err = set_verify_rule(skb, key, nla_get_be16(a));
 			break;
 
 		case OVS_ACTION_ATTR_PUSH_VERIFY:
+            pr_warn("push verify");
 			err = push_verify(skb, key);
 			break;
 
 		case OVS_ACTION_ATTR_POP_VERIFY:
+            pr_warn("pop verify");
 			err = pop_verify(skb, key);
 			break;
 

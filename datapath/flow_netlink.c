@@ -87,18 +87,13 @@ static bool actions_may_change_flow(const struct nlattr *actions)
 		case OVS_ACTION_ATTR_POP_VLAN:
 		case OVS_ACTION_ATTR_POP_VERIFY:
 		case OVS_ACTION_ATTR_PUSH_ETH:
-		case OVS_ACTION_ATTR_PUSH_MPLS:
-		case OVS_ACTION_ATTR_PUSH_NSH:
-		case OVS_ACTION_ATTR_PUSH_VLAN:
-		case OVS_ACTION_ATTR_PUSH_VERIFY:
-		case OVS_ACTION_ATTR_PUSH_ETH:
 		case OVS_ACTION_ATTR_SAMPLE:
 		case OVS_ACTION_ATTR_SET:
 		case OVS_ACTION_ATTR_SET_MASKED:
 		case OVS_ACTION_ATTR_METER:
 		case OVS_ACTION_ATTR_CHECK_PKT_LEN:
-		case OVS_ACTION_ATTR_SET_VERIFY_PORT:
-		case OVS_ACTION_ATTR_SET_VERIFY_RULE:
+		case OVS_ACTION_ATTR_VERIFY_PORT:
+		case OVS_ACTION_ATTR_VERIFY_RULE:
 		default:
 			return true;
 		}
@@ -3008,8 +3003,8 @@ static int __ovs_nla_copy_actions(struct net *net, const struct nlattr *attr,
 			[OVS_ACTION_ATTR_METER] = sizeof(u32),
 			[OVS_ACTION_ATTR_CLONE] = (u32)-1,
 			[OVS_ACTION_ATTR_CHECK_PKT_LEN] = (u32)-1,
-			[OVS_ACTION_ATTR_SET_VERIFY_PORT] = sizeof(u32),
-			[OVS_ACTION_ATTR_SET_VERIFY_RULE] = sizeof(__be16),
+			[OVS_ACTION_ATTR_VERIFY_PORT] = sizeof(u32),
+			[OVS_ACTION_ATTR_VERIFY_RULE] = sizeof(__be16),
 			[OVS_ACTION_ATTR_PUSH_VERIFY] = 0,
 			[OVS_ACTION_ATTR_POP_VERIFY] = 0,
 		};
@@ -3077,8 +3072,8 @@ static int __ovs_nla_copy_actions(struct net *net, const struct nlattr *attr,
 			break;
 
         /* PAZZ: do not check */
-        case OVS_ACTION_ATTR_SET_VERIFY_PORT:
-        case OVS_ACTION_ATTR_SET_VERIFY_RULE:
+        case OVS_ACTION_ATTR_VERIFY_PORT:
+        case OVS_ACTION_ATTR_VERIFY_RULE:
         case OVS_ACTION_ATTR_PUSH_VERIFY:
         case OVS_ACTION_ATTR_POP_VERIFY:
             break;

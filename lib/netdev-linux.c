@@ -6516,6 +6516,16 @@ netdev_linux_parse_l2(struct dp_packet *b, uint16_t *l4proto)
 
     l2_len = ETH_HEADER_LEN;
     eth_type = eth_hdr->eth_type;
+
+    if (eth_type_verify(eth_type)) {
+        struct verify_hdr *vhdr = dp_packet_at(b, l2_len, VERIFY_HLEN);
+        if (!vhdr) {
+            return -EINVAL;
+        }
+        eth_type = vhdr->eth_type;
+        l2_len += VERIFY_HLEN;
+    }
+
     if (eth_type_vlan(eth_type)) {
         struct vlan_header *vlan = dp_packet_at(b, l2_len, VLAN_HEADER_LEN);
 

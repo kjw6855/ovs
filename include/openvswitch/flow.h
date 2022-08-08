@@ -128,7 +128,7 @@ struct flow {
     ovs_be32 mpls_lse[ROUND_UP(FLOW_MAX_MPLS_LABELS, 2)]; /* MPLS label stack
                                                              (with padding). */
 
-    union flow_verify_hdr verify_hdr;
+    struct flow_verify_hdr verify_hdr;
 
     /* L3 (64-bit aligned) */
     ovs_be32 nw_src;            /* IPv4 source address or ARP SPA. */
@@ -170,7 +170,7 @@ BUILD_ASSERT_DECL(sizeof(struct ovs_key_nsh) % sizeof(uint64_t) == 0);
 
 /* Remember to update FLOW_WC_SEQ when changing 'struct flow'. */
 BUILD_ASSERT_DECL(offsetof(struct flow, igmp_group_ip4) + sizeof(uint32_t)
-                  == sizeof(struct flow_tnl) + sizeof(struct ovs_key_nsh) + sizeof(union flow_verify_hdr) + 300
+                  == sizeof(struct flow_tnl) + sizeof(struct ovs_key_nsh) + sizeof(struct flow_verify_hdr) + 300
                   && FLOW_WC_SEQ == 42);
 
 /* Incremental points at which flow classification may be performed in

@@ -396,7 +396,7 @@ parse_ethertype(const void **datap, size_t *sizep)
 }
 
 static inline ALWAYS_INLINE size_t
-parse_verify(const void **datap, size_t *sizep, union flow_verify_hdr verify_hdr)
+parse_verify(const void **datap, size_t *sizep, struct flow_verify_hdr *verify_hdr)
 {
     const ovs_be16 *eth_type;
 
@@ -408,9 +408,9 @@ parse_verify(const void **datap, size_t *sizep, union flow_verify_hdr verify_hdr
         data_pull(datap, sizep, sizeof(ovs_be16));
         const ovs_16aligned_be32 *qp = data_pull(datap, sizep, sizeof *qp);
         const ovs_be16 *dp = data_pull(datap, sizep, sizeof *dp);
-        verify_hdr.type = htons(ETH_TYPE_PAZZ);
-        verify_hdr.port = get_16aligned_be32(qp);
-        verify_hdr.rule = *dp;
+        verify_hdr->type = htons(ETH_TYPE_PAZZ);
+        verify_hdr->port = get_16aligned_be32(qp);
+        verify_hdr->rule = *dp;
         return 1;
     }
 
@@ -832,9 +832,9 @@ miniflow_extract(struct dp_packet *packet, struct miniflow *dst)
             miniflow_push_macs(mf, dl_dst, data);
 
             /* PAZZ */
-            union flow_verify_hdr verify;
-            memset(&verify, 0, sizeof(union flow_verify_hdr));
-            size_t num_verify = parse_verify(&data, &size, verify);
+            struct flow_verify_hdr verify;
+            memset(&verify, 0, sizeof(struct flow_verify_hdr));
+            size_t num_verify = parse_verify(&data, &size, &verify);
 
             /* VLAN */
             union flow_vlan_hdr vlans[FLOW_MAX_VLAN_HEADERS];
@@ -848,9 +848,7 @@ miniflow_extract(struct dp_packet *packet, struct miniflow *dst)
             }
 
             if (num_verify > 0) {
-                miniflow_push_words(mf, verify_hdr, &verify, 1);
-                //miniflow_push_be32(mf, verify_port, verify.port);
-                //miniflow_push_be16(mf, verify_rule, verify.rule);
+                miniflow_push_words(mf, verify_hdr, &verify, num_verify);
             }
 
         }
@@ -1109,10 +1107,10 @@ miniflow_extract(struct dp_packet *packet, struct miniflow *dst)
 static ovs_be16
 parse_dl_type(const void **datap, size_t *sizep)
 {
-    union flow_verify_hdr verify;
+    struct flow_verify_hdr verify;
     union flow_vlan_hdr vlans[FLOW_MAX_VLAN_HEADERS];
 
-    parse_verify(datap, sizep, verify);
+    parse_verify(datap, sizep, &verify);
     parse_vlan(datap, sizep, vlans);
 
     return parse_ethertype(datap, sizep);
@@ -2796,7 +2794,7 @@ flow_push_vlan_uninit(struct flow *flow, struct flow_wildcards *wc)
 }
 
 void
-flow_pop_verify(struct flow *flow, struct flow_wildcards *wc)
+flow_pop_verify(struct flow *flow)
 {
     flow->verify_hdr.type = 0;
     flow->verify_hdr.port = 0;
@@ -2804,7 +2802,7 @@ flow_pop_verify(struct flow *flow, struct flow_wildcards *wc)
 }
 
 void
-flow_push_verify_uninit(struct flow *flow, struct flow_wildcards *wc)
+flow_push_verify_uninit(struct flow *flow)
 {
     flow->verify_hdr.type = htons(ETH_TYPE_PAZZ);
 }

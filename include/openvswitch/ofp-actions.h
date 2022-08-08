@@ -95,8 +95,8 @@ struct vl_mff_map;
     OFPACT(POP_MPLS,        ofpact_pop_mpls,    ofpact, "pop_mpls")     \
     OFPACT(DEC_NSH_TTL,     ofpact_null,        ofpact, "dec_nsh_ttl")  \
     OFPACT(DELETE_FIELD,    ofpact_delete_field, ofpact, "delete_field") \
-    OFPACT(SET_VERIFY_PORT, ofpact_verify_port, ofpact, "set_verify_port")\
-    OFPACT(SET_VERIFY_RULE, ofpact_verify_rule, ofpact, "set_verify_rule")\
+    OFPACT(VERIFY_PORT,     ofpact_verify_port, ofpact, "set_verify_port")\
+    OFPACT(VERIFY_RULE,     ofpact_verify_rule, ofpact, "set_verify_rule")\
     OFPACT(PUSH_VERIFY,     ofpact_null,        ofpact, "push_verify")  \
     OFPACT(POP_VERIFY,      ofpact_null,        ofpact, "pop_verify")   \
                                                                         \
@@ -458,7 +458,7 @@ struct ofpact_push_vlan {
 };
 
 /* PAZZ-related impl. */
-/* OFPACT_SET_VERIFY_PORT */
+/* OFPACT_VERIFY_PORT */
 struct ofpact_verify_port {
     OFPACT_PADDED_MEMBERS(
         struct ofpact ofpact;
@@ -466,7 +466,7 @@ struct ofpact_verify_port {
     );
 };
 
-/* OFPACT_SET_VERIFY_RULE */
+/* OFPACT_VERIFY_RULE */
 struct ofpact_verify_rule {
     OFPACT_PADDED_MEMBERS(
         struct ofpact ofpact;

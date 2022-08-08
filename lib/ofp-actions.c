@@ -263,10 +263,10 @@ enum ofp_raw_action_type {
     OFPAT_RAW15_METER,
 
     /* OF1.0(30), OF1.1(30), OF1.2+(30): ovs_be32. */
-    OFPAT_RAW_SET_VERIFY_PORT,
+    OFPAT_RAW_VERIFY_PORT,
 
     /* OF1.0(31), OF1.1(31), OF1.2+(31): ovs_be16. */
-    OFPAT_RAW_SET_VERIFY_RULE,
+    OFPAT_RAW_VERIFY_RULE,
 
     /* OF1.0(32), OF1.1(32), OF1.2+(32): void. */
     OFPAT_RAW_PUSH_VERIFY,
@@ -491,8 +491,8 @@ ofpact_next_flattened(const struct ofpact *ofpact)
     case OFPACT_DEC_MPLS_TTL:
     case OFPACT_PUSH_MPLS:
     case OFPACT_POP_MPLS:
-    case OFPACT_SET_VERIFY_PORT:
-    case OFPACT_SET_VERIFY_RULE:
+    case OFPACT_VERIFY_PORT:
+    case OFPACT_VERIFY_RULE:
     case OFPACT_PUSH_VERIFY:
     case OFPACT_POP_VERIFY:
     case OFPACT_SET_TUNNEL:
@@ -4087,23 +4087,23 @@ check_POP_MPLS(const struct ofpact_pop_mpls *a, struct ofpact_check_params *cp)
 /* Set VERIFY_PORT action. */
 
 static enum ofperr
-decode_OFPAT_RAW_SET_VERIFY_PORT(ovs_be32 port,
+decode_OFPAT_RAW_VERIFY_PORT(ovs_be32 port,
                                  enum ofp_version ofp_version OVS_UNUSED,
                                  struct ofpbuf *out)
 {
-    ofpact_put_SET_VERIFY_PORT(out)->verify_port = port;
+    ofpact_put_VERIFY_PORT(out)->verify_port = port;
     return 0;
 }
 
 static void
-encode_SET_VERIFY_PORT(const struct ofpact_verify_port *verify_port,
+encode_VERIFY_PORT(const struct ofpact_verify_port *verify_port,
                  enum ofp_version ofp_version OVS_UNUSED, struct ofpbuf *out)
 {
-    put_OFPAT_SET_VERIFY_PORT(out, verify_port->verify_port);
+    put_OFPAT_VERIFY_PORT(out, verify_port->verify_port);
 }
 
 static char * OVS_WARN_UNUSED_RESULT
-parse_SET_VERIFY_PORT(char *arg, const struct ofpact_parse_params *pp)
+parse_VERIFY_PORT(char *arg, const struct ofpact_parse_params *pp)
 {
     struct ofpact_verify_port *verify_port;
     char *error;
@@ -4113,7 +4113,7 @@ parse_SET_VERIFY_PORT(char *arg, const struct ofpact_parse_params *pp)
     if (error)
         return error;
 
-    verify_port = ofpact_put_SET_VERIFY_PORT(pp->ofpacts);
+    verify_port = ofpact_put_VERIFY_PORT(pp->ofpacts);
     verify_port->verify_port = pcp;
 
     return NULL;
@@ -4121,7 +4121,7 @@ parse_SET_VERIFY_PORT(char *arg, const struct ofpact_parse_params *pp)
 
 
 static void
-format_SET_VERIFY_PORT(const struct ofpact_verify_port *a,
+format_VERIFY_PORT(const struct ofpact_verify_port *a,
                  const struct ofpact_format_params *fp)
 {
     ds_put_format(fp->s, "%sset_verify_port:%s%"PRIu32,
@@ -4129,8 +4129,8 @@ format_SET_VERIFY_PORT(const struct ofpact_verify_port *a,
 }
 
 static enum ofperr
-check_SET_VERIFY_PORT(const struct ofpact_verify_port *a OVS_UNUSED,
-                struct ofpact_check_params *cp)
+check_VERIFY_PORT(const struct ofpact_verify_port *a OVS_UNUSED,
+                struct ofpact_check_params *cp OVS_UNUSED)
 {
     /*
     struct flow *flow = &cp->match->flow;
@@ -4144,23 +4144,23 @@ check_SET_VERIFY_PORT(const struct ofpact_verify_port *a OVS_UNUSED,
 /* Set VERIFY_RULE action. */
 
 static enum ofperr
-decode_OFPAT_RAW_SET_VERIFY_RULE(ovs_be16 rule,
+decode_OFPAT_RAW_VERIFY_RULE(ovs_be16 rule,
                                  enum ofp_version ofp_version OVS_UNUSED,
                                  struct ofpbuf *out)
 {
-    ofpact_put_SET_VERIFY_RULE(out)->verify_rule = rule;
+    ofpact_put_VERIFY_RULE(out)->verify_rule = rule;
     return 0;
 }
 
 static void
-encode_SET_VERIFY_RULE(const struct ofpact_verify_rule *verify_rule,
+encode_VERIFY_RULE(const struct ofpact_verify_rule *verify_rule,
                  enum ofp_version ofp_version OVS_UNUSED, struct ofpbuf *out)
 {
-    put_OFPAT_SET_VERIFY_RULE(out, verify_rule->verify_rule);
+    put_OFPAT_VERIFY_RULE(out, verify_rule->verify_rule);
 }
 
 static char * OVS_WARN_UNUSED_RESULT
-parse_SET_VERIFY_RULE(char *arg, const struct ofpact_parse_params *pp)
+parse_VERIFY_RULE(char *arg, const struct ofpact_parse_params *pp)
 {
     struct ofpact_verify_rule *verify_rule;
     char *error;
@@ -4170,14 +4170,14 @@ parse_SET_VERIFY_RULE(char *arg, const struct ofpact_parse_params *pp)
     if (error)
         return error;
 
-    verify_rule = ofpact_put_SET_VERIFY_RULE(pp->ofpacts);
+    verify_rule = ofpact_put_VERIFY_RULE(pp->ofpacts);
     verify_rule->verify_rule = pcp;
     return NULL;
 }
 
 
 static void
-format_SET_VERIFY_RULE(const struct ofpact_verify_rule *a,
+format_VERIFY_RULE(const struct ofpact_verify_rule *a,
                  const struct ofpact_format_params *fp)
 {
     ds_put_format(fp->s, "%sset_verify_rule:%s%"PRIu16,
@@ -4185,8 +4185,8 @@ format_SET_VERIFY_RULE(const struct ofpact_verify_rule *a,
 }
 
 static enum ofperr
-check_SET_VERIFY_RULE(const struct ofpact_verify_rule *a OVS_UNUSED,
-                struct ofpact_check_params *cp)
+check_VERIFY_RULE(const struct ofpact_verify_rule *a OVS_UNUSED,
+                struct ofpact_check_params *cp OVS_UNUSED)
 {
     /*
     struct flow *flow = &cp->match->flow;
@@ -4214,7 +4214,8 @@ encode_PUSH_VERIFY(const struct ofpact_null *null OVS_UNUSED,
 }
 
 static char * OVS_WARN_UNUSED_RESULT
-parse_PUSH_VERIFY(char *arg, const struct ofpact_parse_params *pp)
+parse_PUSH_VERIFY(char *arg OVS_UNUSED,
+                  const struct ofpact_parse_params *pp)
 {
 
     ofpact_put_PUSH_VERIFY(pp->ofpacts);
@@ -4233,7 +4234,7 @@ check_PUSH_VERIFY(const struct ofpact_null *a OVS_UNUSED,
                 struct ofpact_check_params *cp)
 {
     struct flow *flow = &cp->match->flow;
-    flow_push_verify_uninit(flow, NULL);
+    flow_push_verify_uninit(flow);
     return 0;
 }
 
@@ -4272,7 +4273,7 @@ static enum ofperr
 check_POP_VERIFY(const struct ofpact_null *a OVS_UNUSED,
                  const struct ofpact_check_params *cp OVS_UNUSED)
 {
-    flow_pop_verify(&cp->match->flow, NULL);
+    flow_pop_verify(&cp->match->flow);
     return 0;
 }
 
@@ -8137,8 +8138,8 @@ action_set_classify(const struct ofpact *a)
     case OFPACT_SET_TUNNEL:
     case OFPACT_SET_VLAN_PCP:
     case OFPACT_SET_VLAN_VID:
-    case OFPACT_SET_VERIFY_PORT:
-    case OFPACT_SET_VERIFY_RULE:
+    case OFPACT_VERIFY_PORT:
+    case OFPACT_VERIFY_RULE:
         return ACTION_SLOT_SET_OR_MOVE;
 
     case OFPACT_BUNDLE:
@@ -8350,8 +8351,8 @@ ovs_instruction_type_from_ofpact_type(enum ofpact_type type,
     case OFPACT_DEC_MPLS_TTL:
     case OFPACT_PUSH_MPLS:
     case OFPACT_POP_MPLS:
-    case OFPACT_SET_VERIFY_PORT:
-    case OFPACT_SET_VERIFY_RULE:
+    case OFPACT_VERIFY_PORT:
+    case OFPACT_VERIFY_RULE:
     case OFPACT_PUSH_VERIFY:
     case OFPACT_POP_VERIFY:
     case OFPACT_SET_TUNNEL:
@@ -9099,8 +9100,8 @@ get_ofpact_map(enum ofp_version version)
         { OFPACT_SET_L4_SRC_PORT, 9 },
         { OFPACT_SET_L4_DST_PORT, 10 },
         { OFPACT_ENQUEUE, 11 },
-        { OFPACT_SET_VERIFY_PORT, 30 },
-        { OFPACT_SET_VERIFY_RULE, 31 },
+        { OFPACT_VERIFY_PORT, 30 },
+        { OFPACT_VERIFY_RULE, 31 },
         { OFPACT_PUSH_VERIFY, 32 },
         { OFPACT_POP_VERIFY, 33 },
         { 0, -1 },
@@ -9133,8 +9134,8 @@ get_ofpact_map(enum ofp_version version)
         { OFPACT_GROUP, 22 },
         { OFPACT_SET_IP_TTL, 23 },
         { OFPACT_DEC_TTL, 24 },
-        { OFPACT_SET_VERIFY_PORT, 30 },
-        { OFPACT_SET_VERIFY_RULE, 31 },
+        { OFPACT_VERIFY_PORT, 30 },
+        { OFPACT_VERIFY_RULE, 31 },
         { OFPACT_PUSH_VERIFY, 32 },
         { OFPACT_POP_VERIFY, 33 },
         { 0, -1 },
@@ -9156,8 +9157,8 @@ get_ofpact_map(enum ofp_version version)
         { OFPACT_SET_IP_TTL, 23 },
         { OFPACT_DEC_TTL, 24 },
         { OFPACT_SET_FIELD, 25 },
-        { OFPACT_SET_VERIFY_PORT, 30 },
-        { OFPACT_SET_VERIFY_RULE, 31 },
+        { OFPACT_VERIFY_PORT, 30 },
+        { OFPACT_VERIFY_RULE, 31 },
         { OFPACT_PUSH_VERIFY, 32 },
         { OFPACT_POP_VERIFY, 33 },
         /* OF1.3+ OFPAT_PUSH_PBB (26) not supported. */
@@ -9300,8 +9301,8 @@ ofpact_outputs_to_port(const struct ofpact *ofpact, ofp_port_t port)
     case OFPACT_DEC_NSH_TTL:
     case OFPACT_CHECK_PKT_LARGER:
     case OFPACT_DELETE_FIELD:
-    case OFPACT_SET_VERIFY_PORT:
-    case OFPACT_SET_VERIFY_RULE:
+    case OFPACT_VERIFY_PORT:
+    case OFPACT_VERIFY_RULE:
     case OFPACT_PUSH_VERIFY:
     case OFPACT_POP_VERIFY:
     default:

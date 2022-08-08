@@ -129,8 +129,8 @@ odp_action_len(uint16_t type)
     case OVS_ACTION_ATTR_POP_VLAN: return 0;
     case OVS_ACTION_ATTR_PUSH_MPLS: return sizeof(struct ovs_action_push_mpls);
     case OVS_ACTION_ATTR_POP_MPLS: return sizeof(ovs_be16);
-    case OVS_ACTION_ATTR_SET_VERIFY_PORT: return sizeof(uint32_t);
-    case OVS_ACTION_ATTR_SET_VERIFY_RULE: return sizeof(uint16_t);
+    case OVS_ACTION_ATTR_VERIFY_PORT: return sizeof(uint32_t);
+    case OVS_ACTION_ATTR_VERIFY_RULE: return sizeof(uint16_t);
     case OVS_ACTION_ATTR_PUSH_VERIFY: return 0;
     case OVS_ACTION_ATTR_POP_VERIFY: return 0;
     case OVS_ACTION_ATTR_RECIRC: return sizeof(uint32_t);
@@ -1232,11 +1232,11 @@ format_odp_action(struct ds *ds, const struct nlattr *a,
         ds_put_format(ds, "pop_mpls(eth_type=0x%"PRIx16")", ntohs(ethertype));
         break;
     }
-    case OVS_ACTION_ATTR_SET_VERIFY_PORT: {
+    case OVS_ACTION_ATTR_VERIFY_PORT: {
         ds_put_format(ds, "set_verify_port(%"PRIu32")", nl_attr_get_u32(a));
         break;
     }
-    case OVS_ACTION_ATTR_SET_VERIFY_RULE: {
+    case OVS_ACTION_ATTR_VERIFY_RULE: {
         ds_put_format(ds, "set_verify_port(%"PRIu16")", nl_attr_get_u16(a));
         break;
     }
@@ -7907,14 +7907,16 @@ commit_verify_action(const struct flow *flow, struct flow *base,
             nl_msg_put_flag(odp_actions, OVS_ACTION_ATTR_PUSH_VERIFY);
 
         if (flow->verify_hdr.rule > 0) {
-            nl_msg_put_unspec(odp_actions, OVS_ACTION_ATTR_SET_VERIFY_PORT, &flow->verify_hdr.port, sizeof(uint32_t));
-            nl_msg_put_unspec(odp_actions, OVS_ACTION_ATTR_SET_VERIFY_RULE, &flow->verify_hdr.rule, sizeof(uint16_t));
+            nl_msg_put_unspec(odp_actions, OVS_ACTION_ATTR_VERIFY_PORT,
+                              &flow->verify_hdr.port, sizeof(uint32_t));
+            nl_msg_put_unspec(odp_actions, OVS_ACTION_ATTR_VERIFY_RULE,
+                              &flow->verify_hdr.rule, sizeof(uint16_t));
         }
     } else if (has_base_verify) {
         nl_msg_put_flag(odp_actions, OVS_ACTION_ATTR_POP_VERIFY);
     }
 
-    base->verify_hdr.qtag = flow->verify_hdr.qtag;
+    base->verify_hdr = flow->verify_hdr;
 }
 
 /* Wildcarding already done at action translation time. */

@@ -814,6 +814,10 @@ requires_datapath_assistance(const struct nlattr *a)
     case OVS_ACTION_ATTR_METER:
         return true;
 
+    case OVS_ACTION_ATTR_VERIFY_PORT:
+    case OVS_ACTION_ATTR_VERIFY_RULE:
+    case OVS_ACTION_ATTR_PUSH_VERIFY:
+    case OVS_ACTION_ATTR_POP_VERIFY:
     case OVS_ACTION_ATTR_SET:
     case OVS_ACTION_ATTR_SET_MASKED:
     case OVS_ACTION_ATTR_PUSH_VLAN:
@@ -822,10 +826,6 @@ requires_datapath_assistance(const struct nlattr *a)
     case OVS_ACTION_ATTR_HASH:
     case OVS_ACTION_ATTR_PUSH_MPLS:
     case OVS_ACTION_ATTR_POP_MPLS:
-    case OVS_ACTION_ATTR_SET_VERIFY_PORT:
-    case OVS_ACTION_ATTR_SET_VERIFY_RULE:
-    case OVS_ACTION_ATTR_PUSH_VERIFY:
-    case OVS_ACTION_ATTR_POP_VERIFY:
     case OVS_ACTION_ATTR_TRUNC:
     case OVS_ACTION_ATTR_PUSH_ETH:
     case OVS_ACTION_ATTR_POP_ETH:
@@ -969,13 +969,13 @@ odp_execute_actions(void *dp, struct dp_packet_batch *batch, bool steal,
             }
             break;
 
-        case OVS_ACTION_ATTR_SET_VERIFY_PORT:
+        case OVS_ACTION_ATTR_VERIFY_PORT:
             DP_PACKET_BATCH_FOR_EACH (i, packet, batch) {
                 eth_set_verify_port(packet, nl_attr_get_be32(a));
             }
             break;
 
-        case OVS_ACTION_ATTR_SET_VERIFY_RULE:
+        case OVS_ACTION_ATTR_VERIFY_RULE:
             DP_PACKET_BATCH_FOR_EACH (i, packet, batch) {
                 eth_set_verify_rule(packet, nl_attr_get_be16(a));
             }

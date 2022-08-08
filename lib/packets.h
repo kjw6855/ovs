@@ -559,18 +559,19 @@ BUILD_ASSERT_DECL(VLAN_ETH_HEADER_LEN == sizeof(struct vlan_eth_header));
 
 /* PAZZ related definitions */
 #define VERIFY_HLEN         8
+
 struct verify_hdr {
-    ovs_be16 verify_type;
-    ovs_be32 verify_port;
+    ovs_be16 eth_type;
     ovs_be16 verify_rule;
+    ovs_be32 verify_port;
 };
 
 struct verify_eth_header {
     struct eth_addr veth_dst;
     struct eth_addr veth_src;
     ovs_be16 veth_type;         /* Always htons(ETH_TYPE_PAZZ). */
-    ovs_be32 veth_port;         /* Lowest 12 bits are VLAN ID. */
     ovs_be16 veth_rule;
+    ovs_be32 veth_port;         /* Lowest 12 bits are VLAN ID. */
 };
 
 /* MPLS related definitions */

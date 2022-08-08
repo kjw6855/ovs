@@ -1010,10 +1010,6 @@ enum ovs_action_attr {
 	OVS_ACTION_ATTR_SET,          /* One nested OVS_KEY_ATTR_*. */
 	OVS_ACTION_ATTR_PUSH_VLAN,    /* struct ovs_action_push_vlan. */
 	OVS_ACTION_ATTR_POP_VLAN,     /* No argument. */
-	OVS_ACTION_ATTR_SET_VERIFY_PORT,  /* u32 port number. */
-	OVS_ACTION_ATTR_SET_VERIFY_RULE,  /* u16 rule number. */
-	OVS_ACTION_ATTR_PUSH_VERIFY,  /* No argument. */
-	OVS_ACTION_ATTR_POP_VERIFY,   /* No argument. */
 	OVS_ACTION_ATTR_SAMPLE,       /* Nested OVS_SAMPLE_ATTR_*. */
 	OVS_ACTION_ATTR_RECIRC,       /* u32 recirc_id. */
 	OVS_ACTION_ATTR_HASH,	      /* struct ovs_action_hash. */
@@ -1040,6 +1036,11 @@ enum ovs_action_attr {
 	OVS_ACTION_ATTR_DROP,          /* u32 xlate_error. */
 	OVS_ACTION_ATTR_LB_OUTPUT,     /* u32 bond-id. */
 #endif
+
+	OVS_ACTION_ATTR_VERIFY_PORT = 26,  /* u32 port number. */
+	OVS_ACTION_ATTR_VERIFY_RULE = 27,  /* u16 rule number. */
+	OVS_ACTION_ATTR_PUSH_VERIFY = 28,  /* No argument. */
+	OVS_ACTION_ATTR_POP_VERIFY  = 29,   /* No argument. */
 	__OVS_ACTION_ATTR_MAX,	      /* Nothing past this will be accepted
 				       * from userspace. */
 
