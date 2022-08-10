@@ -54,6 +54,7 @@
 #include "flow.h"
 #include "flow_netlink.h"
 #include "gso.h"
+#include "verify.h"
 
 struct ovs_len_tbl {
 	int len;
@@ -2031,6 +2032,12 @@ static int __ovs_nla_put_key(const struct sw_flow_key *swkey,
 		eth_key = nla_data(nla);
 		ether_addr_copy(eth_key->eth_src, output->eth.src);
 		ether_addr_copy(eth_key->eth_dst, output->eth.dst);
+
+#ifdef PAZZ_DEBUG
+        if (eth_type_verify(swkey->eth.vhead.type)) {
+            pr_warn("put_key: type verify");
+        }
+#endif
 
 		if (swkey->eth.vlan.tci || eth_type_vlan(swkey->eth.type)) {
 			if (ovs_nla_put_vlan(skb, &output->eth.vlan, is_mask))

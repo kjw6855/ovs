@@ -6,6 +6,9 @@
 #include <linux/if_ether.h>
 #include <linux/netdevice.h>
 
+/* comment out for debug mode */
+//#define PAZZ_DEBUG
+
 #define VERIFY_HLEN         8
 #define ETH_TYPE_PAZZ       0x2080
 

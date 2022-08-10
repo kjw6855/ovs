@@ -29,6 +29,7 @@
 #include <linux/in6.h>
 #include <linux/if_arp.h>
 #include <linux/if_vlan.h>
+#include <linux/crc16.h>
 
 #include <net/dst.h>
 #include <net/ip.h>
@@ -371,8 +372,12 @@ static int pop_verify(struct sk_buff *skb, struct sw_flow_key *key)
 
     // get original ethernet
     new_verify = (struct verify_hdr *) (skb_mac_header(skb) + ETH_ALEN * 2);
-    pr_warn("port: %d, rule: %d", ntohl(new_verify->verify_port),
-            ntohs(new_verify->verify_rule));
+
+#ifdef PAZZ_DEBUG
+    pr_warn("port: %d (%d), rule: %#x (%#x)",
+            ntohl(new_verify->verify_port), ntohl(key->eth.vhead.port),
+            new_verify->verify_rule, key->eth.vhead.rule);
+#endif
 
     skb_postpull_rcsum(skb, skb_mac_header(skb) + ETH_ALEN * 2, VERIFY_HLEN);
 
@@ -408,7 +413,7 @@ static int set_verify_port(struct sk_buff *skb, struct sw_flow_key *key,
 
     skb_postpush_rcsum(skb, eth_hdr(skb) + ETH_ALEN * 2, VERIFY_HLEN);
 
-    key->eth.vhead.port = port;
+    key->eth.vhead.port = new_verify->verify_port;
 
     return 0;
 }
@@ -417,6 +422,7 @@ static int set_verify_rule(struct sk_buff *skb, struct sw_flow_key *key,
             const __be16 rule)
 {
     struct verify_hdr *new_verify;
+    __be16 orig_rule;
     int err;
 
     err = skb_ensure_writable(skb, ETH_HLEN + VERIFY_HLEN);
@@ -426,11 +432,18 @@ static int set_verify_rule(struct sk_buff *skb, struct sw_flow_key *key,
     skb_postpull_rcsum(skb, skb_mac_header(skb) + ETH_ALEN * 2, VERIFY_HLEN);
 
     new_verify = (struct verify_hdr *) (skb_mac_header(skb) + ETH_ALEN * 2);
-    new_verify->verify_rule = rule;
+    orig_rule = new_verify->verify_rule;
+    new_verify->verify_rule = crc16(new_verify->verify_rule, (u8 const *)&rule, 2);
+
+#ifdef PAZZ_DEBUG
+    pr_warn("add new verify rule: %#x -> %#x (+%u)",
+            orig_rule, new_verify->verify_rule,
+            ntohs(rule));
+#endif
 
     skb_postpush_rcsum(skb, eth_hdr(skb) + ETH_ALEN * 2, VERIFY_HLEN);
 
-    key->eth.vhead.rule = rule;
+    key->eth.vhead.rule = new_verify->verify_rule;
 
     return 0;
 }

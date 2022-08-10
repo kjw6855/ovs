@@ -8059,14 +8059,14 @@ ofpact_copy(struct ofpbuf *out, const struct ofpact *a)
 /* The order in which actions in an action set get executed.  This is only for
  * the actions where only the last instance added is used. */
 #define ACTION_SET_ORDER                        \
+    SLOT(OFPACT_POP_VERIFY)                     \
     SLOT(OFPACT_STRIP_VLAN)                     \
     SLOT(OFPACT_POP_MPLS)                       \
-    SLOT(OFPACT_POP_VERIFY)                     \
     SLOT(OFPACT_DECAP)                          \
     SLOT(OFPACT_ENCAP)                          \
-    SLOT(OFPACT_PUSH_VERIFY)                    \
     SLOT(OFPACT_PUSH_MPLS)                      \
     SLOT(OFPACT_PUSH_VLAN)                      \
+    SLOT(OFPACT_PUSH_VERIFY)                    \
     SLOT(OFPACT_DEC_TTL)                        \
     SLOT(OFPACT_DEC_MPLS_TTL)                   \
     SLOT(OFPACT_DEC_NSH_TTL)

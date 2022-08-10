@@ -2797,14 +2797,15 @@ void
 flow_pop_verify(struct flow *flow)
 {
     flow->verify_hdr.type = 0;
-    flow->verify_hdr.port = 0;
-    flow->verify_hdr.rule = 0;
+    /* do not clear rule and port */
 }
 
 void
 flow_push_verify_uninit(struct flow *flow)
 {
     flow->verify_hdr.type = htons(ETH_TYPE_PAZZ);
+    flow->verify_hdr.rule = 0;
+    flow->verify_hdr.port = 0;
 }
 
 /* Returns the number of MPLS LSEs present in 'flow'

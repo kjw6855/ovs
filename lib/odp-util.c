@@ -7903,9 +7903,11 @@ commit_verify_action(const struct flow *flow, struct flow *base,
     bool has_base_verify = eth_type_verify(base->verify_hdr.type);
 
     if (has_flow_verify) {
+        // PUSH_VERIFY
         if (!has_base_verify)
             nl_msg_put_flag(odp_actions, OVS_ACTION_ATTR_PUSH_VERIFY);
 
+        // SET port & rule
         if (flow->verify_hdr.rule > 0) {
             nl_msg_put_unspec(odp_actions, OVS_ACTION_ATTR_VERIFY_PORT,
                               &flow->verify_hdr.port, sizeof(uint32_t));
@@ -7913,6 +7915,15 @@ commit_verify_action(const struct flow *flow, struct flow *base,
                               &flow->verify_hdr.rule, sizeof(uint16_t));
         }
     } else if (has_base_verify) {
+        // POP_VERIFY does not clear rule & port.
+        if (flow->verify_hdr.rule != base->verify_hdr.rule) {
+            nl_msg_put_unspec(odp_actions, OVS_ACTION_ATTR_VERIFY_PORT,
+                              &flow->verify_hdr.port, sizeof(uint32_t));
+            nl_msg_put_unspec(odp_actions, OVS_ACTION_ATTR_VERIFY_RULE,
+                              &flow->verify_hdr.rule, sizeof(uint16_t));
+        }
+
+        // POP after SET
         nl_msg_put_flag(odp_actions, OVS_ACTION_ATTR_POP_VERIFY);
     }
 
