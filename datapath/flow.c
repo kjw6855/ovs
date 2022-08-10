@@ -53,6 +53,7 @@
 #include "flow.h"
 #include "flow_netlink.h"
 #include "vport.h"
+#include "verify.h"
 
 u64 ovs_flow_used_time(unsigned long flow_jiffies)
 {
@@ -380,6 +381,24 @@ static int parse_vlan(struct sk_buff *skb, struct sw_flow_key *key)
 		return res;
 
 	return 0;
+}
+
+static void parse_verify(struct sk_buff *skb, struct sw_flow_key *key)
+{
+	__be16 proto = *(__be16 *) skb->data;
+
+    key->eth.vhead.type = 0;
+    key->eth.vhead.rule = 0;
+    key->eth.vhead.port = 0;
+
+    if (proto == htons(ETH_TYPE_PAZZ)) {
+        struct verify_head *vhead = (struct verify_head *)skb->data;
+        key->eth.vhead.type = vhead->type;
+        key->eth.vhead.rule = vhead->rule;
+        key->eth.vhead.port = vhead->port;
+
+        __skb_pull(skb, VERIFY_HLEN);
+    }
 }
 
 static __be16 parse_ethertype(struct sk_buff *skb)
@@ -811,6 +830,8 @@ static int key_extract(struct sk_buff *skb, struct sw_flow_key *key)
 		/* We are going to push all headers that we pull, so no need to
 		 * update skb->csum here.
 		 */
+
+        parse_verify(skb, key);
 
 		if (unlikely(parse_vlan(skb, key)))
 			return -ENOMEM;

@@ -312,6 +312,12 @@ static int push_verify(struct sk_buff *skb, struct sw_flow_key *key)
 {
     struct verify_hdr *new_verify;
 
+    __be16 ethertype = *(__be16 *) (skb_mac_header(skb) + ETH_ALEN * 2);
+    if (unlikely(ethertype == htons(ETH_TYPE_PAZZ))) {
+        pr_warn("Cannot push-verify: protocol (%#x)", ntohs(ethertype));
+        return 0;
+    }
+
     if (skb_cow_head(skb, VERIFY_HLEN) < 0)
         return -ENOMEM;
 
@@ -323,8 +329,8 @@ static int push_verify(struct sk_buff *skb, struct sw_flow_key *key)
 
     new_verify = (struct verify_hdr *) (skb_mac_header(skb) + ETH_ALEN * 2);
     new_verify->eth_type = htons(ETH_TYPE_PAZZ);
-    new_verify->verify_port = htonl((uint32_t) 1);
     new_verify->verify_rule = htons(1);
+    new_verify->verify_port = htonl((uint32_t) 1);
 
     skb->mac_len += VERIFY_HLEN;
     //new_verify->eth_type = skb->protocol;    // original type
@@ -337,6 +343,9 @@ static int push_verify(struct sk_buff *skb, struct sw_flow_key *key)
                     + (2 * ETH_ALEN), VERIFY_HLEN, 0));
     }
 
+    key->eth.vhead.type = htons(ETH_TYPE_PAZZ);
+    key->eth.vhead.rule = new_verify->verify_rule;
+    key->eth.vhead.port = new_verify->verify_port;
     //invalidate_flow_key(key);
 
     return 0;
@@ -347,35 +356,43 @@ static int pop_verify(struct sk_buff *skb, struct sw_flow_key *key)
     struct verify_hdr *new_verify;
     int err;
 
-    if (unlikely(skb->protocol == htons(ETH_TYPE_PAZZ))) {
+    __be16 ethertype = *(__be16 *) (skb_mac_header(skb) + ETH_ALEN * 2);
+
+    if (unlikely(ethertype != htons(ETH_TYPE_PAZZ))) {
+        pr_warn("Cannot pop-verify: protocol (%#x)", ntohs(ethertype));
         return 0;
     }
 
     err = skb_ensure_writable(skb, ETH_HLEN + VERIFY_HLEN);
-    if (unlikely(err))
+    if (unlikely(err)) {
+        pr_warn("Cannot write on skb");
         return err;
+    }
 
     // get original ethernet
     new_verify = (struct verify_hdr *) (skb_mac_header(skb) + ETH_ALEN * 2);
+    pr_warn("port: %d, rule: %d", ntohl(new_verify->verify_port),
+            ntohs(new_verify->verify_rule));
 
     skb_postpull_rcsum(skb, skb_mac_header(skb) + ETH_ALEN * 2, VERIFY_HLEN);
 
     memmove(skb_mac_header(skb) + VERIFY_HLEN, skb_mac_header(skb),
-            skb->mac_len);
+            ETH_ALEN * 2);
 
     __skb_pull(skb, VERIFY_HLEN);
 
-    //skb_reset_mac_header(skb);
     skb->mac_header += VERIFY_HLEN;
     skb->mac_len -= VERIFY_HLEN;
 
-    //key->mac_proto = MAC_PROTO_ETHERNET;
+    key->eth.vhead.type = 0;
+    key->eth.vhead.rule = 0;
+    key->eth.vhead.port = 0;
     //invalidate_flow_key(key);
 
     return 0;
 }
 
-static int set_verify_port(struct sk_buff *skb, struct sw_flow_key *flow_key,
+static int set_verify_port(struct sk_buff *skb, struct sw_flow_key *key,
             const __be32 port)
 {
     struct verify_hdr *new_verify;
@@ -384,17 +401,19 @@ static int set_verify_port(struct sk_buff *skb, struct sw_flow_key *flow_key,
     if (unlikely(err))
         return err;
 
-	skb_postpull_rcsum(skb, skb_mac_header(skb) + ETH_ALEN * 2, VERIFY_HLEN);
+    skb_postpull_rcsum(skb, skb_mac_header(skb) + ETH_ALEN * 2, VERIFY_HLEN);
 
     new_verify = (struct verify_hdr *) (skb_mac_header(skb) + ETH_ALEN * 2);
     new_verify->verify_port = port;
 
-	skb_postpush_rcsum(skb, eth_hdr(skb) + ETH_ALEN * 2, VERIFY_HLEN);
+    skb_postpush_rcsum(skb, eth_hdr(skb) + ETH_ALEN * 2, VERIFY_HLEN);
+
+    key->eth.vhead.port = port;
 
     return 0;
 }
 
-static int set_verify_rule(struct sk_buff *skb, struct sw_flow_key *flow_key,
+static int set_verify_rule(struct sk_buff *skb, struct sw_flow_key *key,
             const __be16 rule)
 {
     struct verify_hdr *new_verify;
@@ -410,6 +429,8 @@ static int set_verify_rule(struct sk_buff *skb, struct sw_flow_key *flow_key,
     new_verify->verify_rule = rule;
 
     skb_postpush_rcsum(skb, eth_hdr(skb) + ETH_ALEN * 2, VERIFY_HLEN);
+
+    key->eth.vhead.rule = rule;
 
     return 0;
 }
@@ -1440,22 +1461,18 @@ static int do_execute_actions(struct datapath *dp, struct sk_buff *skb,
 			break;
 
 		case OVS_ACTION_ATTR_VERIFY_PORT:
-            pr_warn("verify port");
 			err = set_verify_port(skb, key, nla_get_be32(a));
 			break;
 
 		case OVS_ACTION_ATTR_VERIFY_RULE:
-            pr_warn("verify rule");
 			err = set_verify_rule(skb, key, nla_get_be16(a));
 			break;
 
 		case OVS_ACTION_ATTR_PUSH_VERIFY:
-            pr_warn("push verify");
 			err = push_verify(skb, key);
 			break;
 
 		case OVS_ACTION_ATTR_POP_VERIFY:
-            pr_warn("pop verify");
 			err = pop_verify(skb, key);
 			break;
 

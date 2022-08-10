@@ -64,8 +64,9 @@ struct vlan_head {
 };
 
 struct verify_head {
-    __be32 port;
+    __be16 type;    /* ETH_TYPE_PAZZ */
     __be16 rule;
+    __be32 port;
 };
 
 #define OVS_SW_FLOW_KEY_METADATA_SIZE			\
@@ -93,7 +94,7 @@ struct sw_flow_key {
 	struct {
 		u8     src[ETH_ALEN];	/* Ethernet source address. */
 		u8     dst[ETH_ALEN];	/* Ethernet destination address. */
-        //struct verify_head vhead;
+        struct verify_head vhead;
 		struct vlan_head vlan;
 		struct vlan_head cvlan;
 		__be16 type;		/* Ethernet frame type. */
