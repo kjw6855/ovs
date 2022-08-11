@@ -7,6 +7,11 @@
 #include <linux/netdevice.h>
 
 /* comment out for debug mode */
+//#include <stdlib.h>
+//#include <string.h>
+//#include <stdbool.h>
+//#include <stdint.h>
+//#include <arpa/inet.h>
 //#define PAZZ_DEBUG
 
 #define VERIFY_HLEN         8
@@ -28,5 +33,13 @@ static inline bool eth_type_verify(__be16 ethertype)
 {
     return (ethertype == htons(ETH_TYPE_PAZZ));
 }
+
+/* CRC16 */
+unsigned short crc16_ccitt(const void *buf, int len);
+unsigned short crc16_verify(const void *buf, int len, unsigned short basis);
+
+/* BLOOM */
+//void bloom_free(uint32_t filter);
+void bloom_add(uint32_t *filter, uint32_t item);
 
 #endif  /* verify.h */

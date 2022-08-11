@@ -29,7 +29,6 @@
 #include <linux/in6.h>
 #include <linux/if_arp.h>
 #include <linux/if_vlan.h>
-#include <linux/crc16.h>
 
 #include <net/dst.h>
 #include <net/ip.h>
@@ -331,7 +330,9 @@ static int push_verify(struct sk_buff *skb, struct sw_flow_key *key)
     new_verify = (struct verify_hdr *) (skb_mac_header(skb) + ETH_ALEN * 2);
     new_verify->eth_type = htons(ETH_TYPE_PAZZ);
     new_verify->verify_rule = htons(1);
-    new_verify->verify_port = htonl((uint32_t) 1);
+
+    // In paper, port is set to hash(p) that doesn't affect bloom filter
+    new_verify->verify_port = 0;
 
     skb->mac_len += VERIFY_HLEN;
     //new_verify->eth_type = skb->protocol;    // original type
@@ -374,9 +375,8 @@ static int pop_verify(struct sk_buff *skb, struct sw_flow_key *key)
     new_verify = (struct verify_hdr *) (skb_mac_header(skb) + ETH_ALEN * 2);
 
 #ifdef PAZZ_DEBUG
-    pr_warn("port: %d (%d), rule: %#x (%#x)",
-            ntohl(new_verify->verify_port), ntohl(key->eth.vhead.port),
-            new_verify->verify_rule, key->eth.vhead.rule);
+    pr_warn("port: %#x, rule: %#x", ntohl(new_verify->verify_port),
+            ntohs(new_verify->verify_rule));
 #endif
 
     skb_postpull_rcsum(skb, skb_mac_header(skb) + ETH_ALEN * 2, VERIFY_HLEN);
@@ -398,10 +398,15 @@ static int pop_verify(struct sk_buff *skb, struct sw_flow_key *key)
 }
 
 static int set_verify_port(struct sk_buff *skb, struct sw_flow_key *key,
-            const __be32 port)
+            const __u32 port)
 {
     struct verify_hdr *new_verify;
     int err;
+    __u32 orig_port;
+#ifdef PAZZ_DEBUG
+    __u32 debug_port;
+#endif
+
     err = skb_ensure_writable(skb, ETH_HLEN + VERIFY_HLEN);
     if (unlikely(err))
         return err;
@@ -409,7 +414,17 @@ static int set_verify_port(struct sk_buff *skb, struct sw_flow_key *key,
     skb_postpull_rcsum(skb, skb_mac_header(skb) + ETH_ALEN * 2, VERIFY_HLEN);
 
     new_verify = (struct verify_hdr *) (skb_mac_header(skb) + ETH_ALEN * 2);
-    new_verify->verify_port = port;
+    orig_port = ntohl(new_verify->verify_port);
+#ifdef PAZZ_DEBUG
+    debug_port = orig_port;
+#endif
+    bloom_add(&orig_port, port);
+    new_verify->verify_port = htonl(orig_port);
+
+#ifdef PAZZ_DEBUG
+    pr_warn("add new verify port: %#x -> %#x (+%u)",
+            debug_port, orig_port, port);
+#endif
 
     skb_postpush_rcsum(skb, eth_hdr(skb) + ETH_ALEN * 2, VERIFY_HLEN);
 
@@ -419,11 +434,14 @@ static int set_verify_port(struct sk_buff *skb, struct sw_flow_key *key,
 }
 
 static int set_verify_rule(struct sk_buff *skb, struct sw_flow_key *key,
-            const __be16 rule)
+            const __u16 rule)
 {
     struct verify_hdr *new_verify;
-    __be16 orig_rule;
     int err;
+    __u16 orig_rule;
+#ifdef PAZZ_DEBUG
+    __u16 debug_rule;
+#endif
 
     err = skb_ensure_writable(skb, ETH_HLEN + VERIFY_HLEN);
     if (unlikely(err))
@@ -432,13 +450,16 @@ static int set_verify_rule(struct sk_buff *skb, struct sw_flow_key *key,
     skb_postpull_rcsum(skb, skb_mac_header(skb) + ETH_ALEN * 2, VERIFY_HLEN);
 
     new_verify = (struct verify_hdr *) (skb_mac_header(skb) + ETH_ALEN * 2);
-    orig_rule = new_verify->verify_rule;
-    new_verify->verify_rule = crc16(new_verify->verify_rule, (u8 const *)&rule, 2);
+    orig_rule = ntohs(new_verify->verify_rule);
+#ifdef PAZZ_DEBUG
+    debug_rule = orig_rule;
+#endif
+    orig_rule = crc16_verify((const void*)&rule, 2, orig_rule);
+    new_verify->verify_rule = htons(orig_rule);
 
 #ifdef PAZZ_DEBUG
     pr_warn("add new verify rule: %#x -> %#x (+%u)",
-            orig_rule, new_verify->verify_rule,
-            ntohs(rule));
+            debug_rule, orig_rule, rule);
 #endif
 
     skb_postpush_rcsum(skb, eth_hdr(skb) + ETH_ALEN * 2, VERIFY_HLEN);
@@ -1474,11 +1495,11 @@ static int do_execute_actions(struct datapath *dp, struct sk_buff *skb,
 			break;
 
 		case OVS_ACTION_ATTR_VERIFY_PORT:
-			err = set_verify_port(skb, key, nla_get_be32(a));
+			err = set_verify_port(skb, key, nla_get_u32(a));
 			break;
 
 		case OVS_ACTION_ATTR_VERIFY_RULE:
-			err = set_verify_rule(skb, key, nla_get_be16(a));
+			err = set_verify_rule(skb, key, nla_get_u16(a));
 			break;
 
 		case OVS_ACTION_ATTR_PUSH_VERIFY:

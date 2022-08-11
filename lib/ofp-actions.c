@@ -4087,11 +4087,11 @@ check_POP_MPLS(const struct ofpact_pop_mpls *a, struct ofpact_check_params *cp)
 /* Set VERIFY_PORT action. */
 
 static enum ofperr
-decode_OFPAT_RAW_VERIFY_PORT(ovs_be32 port,
+decode_OFPAT_RAW_VERIFY_PORT(uint32_t port,
                              enum ofp_version ofp_version OVS_UNUSED,
                              struct ofpbuf *out)
 {
-    ofpact_put_VERIFY_PORT(out)->verify_port = ntohl(port);
+    ofpact_put_VERIFY_PORT(out)->verify_port = port;
     return 0;
 }
 
@@ -4099,7 +4099,7 @@ static void
 encode_VERIFY_PORT(const struct ofpact_verify_port *verify_port,
                    enum ofp_version ofp_version OVS_UNUSED, struct ofpbuf *out)
 {
-    put_OFPAT_VERIFY_PORT(out, htonl(verify_port->verify_port));
+    put_OFPAT_VERIFY_PORT(out, verify_port->verify_port);
 }
 
 static char * OVS_WARN_UNUSED_RESULT
@@ -4114,7 +4114,7 @@ parse_VERIFY_PORT(char *arg, const struct ofpact_parse_params *pp)
         return error;
 
     verify_port = ofpact_put_VERIFY_PORT(pp->ofpacts);
-    verify_port->verify_port = htonl(pcp);
+    verify_port->verify_port = pcp;
 
     return NULL;
 }
@@ -4125,7 +4125,7 @@ format_VERIFY_PORT(const struct ofpact_verify_port *a,
                    const struct ofpact_format_params *fp)
 {
     ds_put_format(fp->s, "%sset_verify_port:%s%"PRIu32,
-                  colors.param, colors.end, ntohl(a->verify_port));
+                  colors.param, colors.end, a->verify_port);
 }
 
 static enum ofperr
@@ -4148,7 +4148,7 @@ decode_OFPAT_RAW_VERIFY_RULE(ovs_be16 rule,
                              enum ofp_version ofp_version OVS_UNUSED,
                              struct ofpbuf *out)
 {
-    ofpact_put_VERIFY_RULE(out)->verify_rule = ntohs(rule);
+    ofpact_put_VERIFY_RULE(out)->verify_rule = rule;
     return 0;
 }
 
@@ -4156,7 +4156,7 @@ static void
 encode_VERIFY_RULE(const struct ofpact_verify_rule *verify_rule,
                    enum ofp_version ofp_version OVS_UNUSED, struct ofpbuf *out)
 {
-    put_OFPAT_VERIFY_RULE(out, htons(verify_rule->verify_rule));
+    put_OFPAT_VERIFY_RULE(out, verify_rule->verify_rule);
 }
 
 static char * OVS_WARN_UNUSED_RESULT
@@ -4171,7 +4171,7 @@ parse_VERIFY_RULE(char *arg, const struct ofpact_parse_params *pp)
         return error;
 
     verify_rule = ofpact_put_VERIFY_RULE(pp->ofpacts);
-    verify_rule->verify_rule = htons(pcp);
+    verify_rule->verify_rule = pcp;
     return NULL;
 }
 
@@ -4181,7 +4181,7 @@ format_VERIFY_RULE(const struct ofpact_verify_rule *a,
                    const struct ofpact_format_params *fp)
 {
     ds_put_format(fp->s, "%sset_verify_rule:%s%"PRIu16,
-                  colors.param, colors.end, ntohs(a->verify_rule));
+                  colors.param, colors.end, a->verify_rule);
 }
 
 static enum ofperr

@@ -462,7 +462,7 @@ struct ofpact_push_vlan {
 struct ofpact_verify_port {
     OFPACT_PADDED_MEMBERS(
         struct ofpact ofpact;
-        ovs_be32 verify_port;
+        uint32_t verify_port;
     );
 };
 
@@ -470,7 +470,7 @@ struct ofpact_verify_port {
 struct ofpact_verify_rule {
     OFPACT_PADDED_MEMBERS(
         struct ofpact ofpact;
-        ovs_be16 verify_rule;
+        uint16_t verify_rule;
     );
 };
 
