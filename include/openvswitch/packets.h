@@ -82,8 +82,9 @@ union flow_vlan_hdr {
 
 struct flow_verify_hdr {
     ovs_be16 type;  /* ETH_TYPE_PAZZ */
-    ovs_be16 rule;
-    ovs_be32 port;
+    uint16_t rule;
+    uint32_t port;
+    uint64_t dpid;
 };
 
 struct ovs_key_nsh {

@@ -1434,9 +1434,19 @@ mf_set_flow_value(const struct mf_field *mf,
     case MFF_CONJ_ID:
         flow->conj_id = ntohl(value->be32);
         break;
-    case MFF_TUN_ID:
-        flow->tunnel.tun_id = value->be64;
+    case MFF_TUN_ID: {
+        ovs_be64 tun_id = value->be64;
+#ifdef TUN_AS_VERIFY
+        uint64_t verify_id = ntohll(tun_id);
+        uint16_t rule_id = (uint16_t) ((verify_id >> 32) & 0xffff);
+        uint32_t port_id = (uint32_t) (verify_id & 0xffffffff);
+        flow->verify_hdr.port = port_id;
+        flow->verify_hdr.rule = rule_id;
+#else
+        flow->tunnel.tun_id = tun_id;
+#endif
         break;
+    }
     case MFF_TUN_SRC:
         flow->tunnel.ip_src = value->be32;
         break;

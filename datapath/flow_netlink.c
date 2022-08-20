@@ -697,7 +697,9 @@ static int ip_tun_from_nlattr(const struct nlattr *attr,
 		case OVS_TUNNEL_KEY_ATTR_ID:
 			SW_FLOW_KEY_PUT(match, tun_key.tun_id,
 					nla_get_be64(a), is_mask);
+#ifndef TUN_AS_VERIFY
 			tun_flags |= TUNNEL_KEY;
+#endif
 			break;
 		case OVS_TUNNEL_KEY_ATTR_IPV4_SRC:
 			SW_FLOW_KEY_PUT(match, tun_key.u.ipv4.src,
@@ -2033,11 +2035,9 @@ static int __ovs_nla_put_key(const struct sw_flow_key *swkey,
 		ether_addr_copy(eth_key->eth_src, output->eth.src);
 		ether_addr_copy(eth_key->eth_dst, output->eth.dst);
 
-#ifdef PAZZ_DEBUG
         if (eth_type_verify(swkey->eth.vhead.type)) {
             pr_warn("put_key: type verify");
         }
-#endif
 
 		if (swkey->eth.vlan.tci || eth_type_vlan(swkey->eth.type)) {
 			if (ovs_nla_put_vlan(skb, &output->eth.vlan, is_mask))
@@ -3010,8 +3010,8 @@ static int __ovs_nla_copy_actions(struct net *net, const struct nlattr *attr,
 			[OVS_ACTION_ATTR_METER] = sizeof(u32),
 			[OVS_ACTION_ATTR_CLONE] = (u32)-1,
 			[OVS_ACTION_ATTR_CHECK_PKT_LEN] = (u32)-1,
-			[OVS_ACTION_ATTR_VERIFY_PORT] = sizeof(u32),
-			[OVS_ACTION_ATTR_VERIFY_RULE] = sizeof(__be16),
+			[OVS_ACTION_ATTR_VERIFY_PORT] = sizeof(struct ovs_action_verify_port),
+			[OVS_ACTION_ATTR_VERIFY_RULE] = sizeof(struct ovs_action_verify_rule),
 			[OVS_ACTION_ATTR_PUSH_VERIFY] = 0,
 			[OVS_ACTION_ATTR_POP_VERIFY] = 0,
 		};

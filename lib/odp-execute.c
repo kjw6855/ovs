@@ -436,6 +436,16 @@ odp_execute_set_action(struct dp_packet *packet, const struct nlattr *a)
 
     case OVS_KEY_ATTR_TUNNEL:
         odp_set_tunnel_action(a, &md->tunnel);
+#ifdef TUN_AS_VERIFY
+        if (md->tunnel.tun_id > 0) {
+            uint64_t verify_id = ntohll(md->tunnel.tun_id);
+            uint16_t rule_id = (uint16_t) ((verify_id >> 32) & 0xffff);
+            uint32_t port_id = (uint32_t) (verify_id & 0xffffffff);
+            eth_set_verify_port(packet, htonl(port_id));
+            eth_set_verify_rule(packet, htons(rule_id));
+            md->tunnel.tun_id = 0;
+        }
+#endif
         break;
 
     case OVS_KEY_ATTR_SKB_MARK:

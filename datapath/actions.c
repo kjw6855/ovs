@@ -398,7 +398,7 @@ static int pop_verify(struct sk_buff *skb, struct sw_flow_key *key)
 }
 
 static int set_verify_port(struct sk_buff *skb, struct sw_flow_key *key,
-            const __u32 port)
+		     const struct ovs_action_verify_port *verify_port)
 {
     struct verify_hdr *new_verify;
     int err;
@@ -418,12 +418,14 @@ static int set_verify_port(struct sk_buff *skb, struct sw_flow_key *key,
 #ifdef PAZZ_DEBUG
     debug_port = orig_port;
 #endif
-    bloom_add(&orig_port, port);
+    bloom_add(&orig_port, verify_port, sizeof(uint64_t) + sizeof(uint32_t));
     new_verify->verify_port = htonl(orig_port);
 
 #ifdef PAZZ_DEBUG
-    pr_warn("add new verify port: %#x -> %#x (+%u)",
-            debug_port, orig_port, port);
+    pr_warn("add new verify port: %#x -> %#x (+%u at %#llx)",
+            debug_port, orig_port,
+            verify_port->port,
+            verify_port->dpid);
 #endif
 
     skb_postpush_rcsum(skb, eth_hdr(skb) + ETH_ALEN * 2, VERIFY_HLEN);
@@ -434,7 +436,7 @@ static int set_verify_port(struct sk_buff *skb, struct sw_flow_key *key,
 }
 
 static int set_verify_rule(struct sk_buff *skb, struct sw_flow_key *key,
-            const __u16 rule)
+		     const struct ovs_action_verify_rule *verify_rule)
 {
     struct verify_hdr *new_verify;
     int err;
@@ -454,12 +456,16 @@ static int set_verify_rule(struct sk_buff *skb, struct sw_flow_key *key,
 #ifdef PAZZ_DEBUG
     debug_rule = orig_rule;
 #endif
-    orig_rule = crc16_verify((const void*)&rule, 2, orig_rule);
+    orig_rule = crc16_verify((const void*)verify_rule,
+            sizeof(uint64_t) + sizeof(uint16_t),
+            orig_rule);
     new_verify->verify_rule = htons(orig_rule);
 
 #ifdef PAZZ_DEBUG
-    pr_warn("add new verify rule: %#x -> %#x (+%u)",
-            debug_rule, orig_rule, rule);
+    pr_warn("add new verify rule: %#x -> %#x (+%#x at %#llx)",
+            debug_rule, orig_rule,
+            verify_rule->rule,
+            verify_rule->dpid);
 #endif
 
     skb_postpush_rcsum(skb, eth_hdr(skb) + ETH_ALEN * 2, VERIFY_HLEN);
@@ -1495,11 +1501,11 @@ static int do_execute_actions(struct datapath *dp, struct sk_buff *skb,
 			break;
 
 		case OVS_ACTION_ATTR_VERIFY_PORT:
-			err = set_verify_port(skb, key, nla_get_u32(a));
+			err = set_verify_port(skb, key, nla_data(a));
 			break;
 
 		case OVS_ACTION_ATTR_VERIFY_RULE:
-			err = set_verify_rule(skb, key, nla_get_u16(a));
+			err = set_verify_rule(skb, key, nla_data(a));
 			break;
 
 		case OVS_ACTION_ATTR_PUSH_VERIFY:

@@ -7366,6 +7366,17 @@ odp_flow_key_to_flow__(const struct nlattr *key, size_t key_len,
 
         res = odp_tun_key_from_attr__(attrs[OVS_KEY_ATTR_TUNNEL], is_mask,
                                       &flow->tunnel, errorp);
+
+#ifdef TUN_AS_VERIFY
+        if (flow->tunnel.tun_id > 0) {
+            uint64_t verify_id = ntohll(flow->tunnel.tun_id);
+            uint16_t rule_id = (uint16_t) ((verify_id >> 32) & 0xffff);
+            uint32_t port_id = (uint32_t) (verify_id & 0xffffffff);
+            flow->verify_hdr.port = port_id;
+            flow->verify_hdr.rule = rule_id;
+            flow->tunnel.tun_id = 0;
+        }
+#endif
         if (res == ODP_FIT_ERROR) {
             goto exit;
         } else if (res == ODP_FIT_PERFECT) {
@@ -7901,6 +7912,8 @@ commit_verify_action(const struct flow *flow, struct flow *base,
     // commit PAZZ
     bool has_flow_verify = eth_type_verify(flow->verify_hdr.type);
     bool has_base_verify = eth_type_verify(base->verify_hdr.type);
+    struct ovs_action_verify_port verify_port;
+    struct ovs_action_verify_rule verify_rule;
 
     if (has_flow_verify) {
         // PUSH_VERIFY
@@ -7908,19 +7921,29 @@ commit_verify_action(const struct flow *flow, struct flow *base,
             nl_msg_put_flag(odp_actions, OVS_ACTION_ATTR_PUSH_VERIFY);
 
         // SET port & rule
-        if (flow->verify_hdr.rule > 0) {
+        if (flow->verify_hdr.rule != base->verify_hdr.rule) {
+            verify_port.port = flow->verify_hdr.port;
+            verify_port.dpid = flow->verify_hdr.dpid;
             nl_msg_put_unspec(odp_actions, OVS_ACTION_ATTR_VERIFY_PORT,
-                              &flow->verify_hdr.port, sizeof(uint32_t));
+                              &verify_port, sizeof verify_port);
+
+            verify_rule.rule = flow->verify_hdr.rule;
+            verify_rule.dpid = flow->verify_hdr.dpid;
             nl_msg_put_unspec(odp_actions, OVS_ACTION_ATTR_VERIFY_RULE,
-                              &flow->verify_hdr.rule, sizeof(uint16_t));
+                              &verify_rule, sizeof verify_rule);
         }
     } else if (has_base_verify) {
         // POP_VERIFY does not clear rule & port.
         if (flow->verify_hdr.rule != base->verify_hdr.rule) {
+            verify_port.port = flow->verify_hdr.port;
+            verify_port.dpid = flow->verify_hdr.dpid;
             nl_msg_put_unspec(odp_actions, OVS_ACTION_ATTR_VERIFY_PORT,
-                              &flow->verify_hdr.port, sizeof(uint32_t));
+                              &verify_port, sizeof verify_port);
+
+            verify_rule.rule = flow->verify_hdr.rule;
+            verify_rule.dpid = flow->verify_hdr.dpid;
             nl_msg_put_unspec(odp_actions, OVS_ACTION_ATTR_VERIFY_RULE,
-                              &flow->verify_hdr.rule, sizeof(uint16_t));
+                              &verify_rule, sizeof verify_rule);
         }
 
         // POP after SET

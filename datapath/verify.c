@@ -191,7 +191,23 @@ jhash_bytes(const void *p_, size_t n, uint32_t basis)
     return c;
 }
 
-void bloom_add(uint32_t *filter, uint32_t item) {
+void bloom_add(uint32_t *filter, const void *p, size_t n) {
+    // filter should have memory
+
+    uint8_t *bits = (uint8_t *)filter;
+    uint32_t hash = jhash_bytes(p, n, 0);
+    uint16_t *first_half = (uint16_t *)&hash;
+    uint16_t *second_half = &first_half[1];
+    uint32_t gi[] = {*first_half, (*first_half + *second_half),(*first_half + 2 * (*second_half)) };
+    int i;
+
+    for (i = 0; i < 3; i++){
+        gi[i] %= 32;
+        bits[gi[i]/8] |= (1 << (gi[i]%8));
+    }
+}
+
+void bloom_add_32bit(uint32_t *filter, uint32_t item) {
     // filter should have memory
 
     uint8_t *bits = (uint8_t *)filter;

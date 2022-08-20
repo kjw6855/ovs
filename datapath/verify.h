@@ -7,15 +7,29 @@
 #include <linux/netdevice.h>
 
 /* comment out for debug mode */
-//#include <stdlib.h>
-//#include <string.h>
-//#include <stdbool.h>
-//#include <stdint.h>
-//#include <arpa/inet.h>
+#if 0
+#include <stdlib.h>
+#include <string.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stddef.h>
+#include <arpa/inet.h>
+struct ovs_action_verify_port {
+    uint64_t dpid;
+    uint32_t port;
+};
+
+struct ovs_action_verify_rule {
+    uint64_t dpid;
+    uint16_t rule;
+};
+#endif
+
 //#define PAZZ_DEBUG
 
 #define VERIFY_HLEN         8
-#define ETH_TYPE_PAZZ       0x2080
+#define ETH_TYPE_PAZZ       0x820
+#define TUN_AS_VERIFY
 
 #define ETH_ADDR_FMT                                                    \
     "%02x:%02x:%02x:%02x:%02x:%02x"
@@ -40,6 +54,7 @@ unsigned short crc16_verify(const void *buf, int len, unsigned short basis);
 
 /* BLOOM */
 //void bloom_free(uint32_t filter);
-void bloom_add(uint32_t *filter, uint32_t item);
+void bloom_add(uint32_t *filter, const void *p, size_t n);
+void bloom_add_32bit(uint32_t *filter, uint32_t item);
 
 #endif  /* verify.h */

@@ -757,9 +757,14 @@ struct ovs_action_push_vlan {
 };
 
 // “Ethertype” 2080
-struct ovs_action_push_verify {
-    __be32 verify_port;
-    __be16 verify_rule;
+struct ovs_action_verify_port {
+    uint64_t dpid;
+    uint32_t port;
+};
+
+struct ovs_action_verify_rule {
+    uint64_t dpid;
+    uint16_t rule;
 };
 
 /* Data path hash algorithm for computing Datapath hash.

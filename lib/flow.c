@@ -407,10 +407,10 @@ parse_verify(const void **datap, size_t *sizep, struct flow_verify_hdr *verify_h
     if (eth_type_verify(*eth_type)) {
         data_pull(datap, sizep, sizeof(ovs_be16));
         const ovs_be16 *dp = data_pull(datap, sizep, sizeof *dp);
-        const ovs_16aligned_be32 *qp = data_pull(datap, sizep, sizeof *qp);
+        const ovs_be32 *qp = data_pull(datap, sizep, sizeof *qp);
         verify_hdr->type = htons(ETH_TYPE_PAZZ);
-        verify_hdr->port = get_16aligned_be32(qp);
-        verify_hdr->rule = *dp;
+        verify_hdr->port = ntohl(*qp);
+        verify_hdr->rule = ntohs(*dp);
         return 1;
     }
 

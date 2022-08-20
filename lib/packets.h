@@ -428,7 +428,9 @@ ovs_be32 set_mpls_lse_values(uint8_t ttl, uint8_t tc, uint8_t bos,
 #define ETH_TYPE_NSH           0x894f
 #define ETH_TYPE_ERSPAN1       0x88be   /* version 1 type II */
 #define ETH_TYPE_ERSPAN2       0x22eb   /* version 2 type III */
-#define ETH_TYPE_PAZZ          0x2080
+#define ETH_TYPE_PAZZ          0x820
+
+#define TUN_AS_VERIFY
 
 static inline bool eth_type_mpls(ovs_be16 eth_type)
 {

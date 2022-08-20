@@ -6947,9 +6947,18 @@ do_xlate_actions(const struct ofpact *ofpacts, size_t ofpacts_len,
             xlate_ofpact_resubmit(ctx, ofpact_get_RESUBMIT(a), last);
             continue;
 
-        case OFPACT_SET_TUNNEL:
-            flow->tunnel.tun_id = htonll(ofpact_get_SET_TUNNEL(a)->tun_id);
+        case OFPACT_SET_TUNNEL: {
+            uint64_t tun_id = ofpact_get_SET_TUNNEL(a)->tun_id;
+#ifdef TUN_AS_VERIFY
+            uint16_t rule_id = (uint16_t) ((tun_id >> 32) & 0xffff);
+            uint32_t port_id = (uint32_t) (tun_id & 0xffffffff);
+            flow->verify_hdr.port = htonl(port_id);
+            flow->verify_hdr.rule = htons(rule_id);
+#else
+            flow->tunnel.tun_id = htonll(tun_id);
+#endif
             break;
+        }
 
         case OFPACT_SET_QUEUE:
             memset(&wc->masks.skb_priority, 0xff,
@@ -7225,6 +7234,9 @@ xlate_in_init(struct xlate_in *xin, struct ofproto_dpif *ofproto,
     xin->in_packet_out = false;
     xin->recirc_queue = NULL;
     xin->xport_uuid = UUID_ZERO;
+
+    // PAZZ
+    xin->flow.verify_hdr.dpid = ofproto->up.datapath_id;
 
     /* Do recirc lookup. */
     xin->frozen_state = NULL;
