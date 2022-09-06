@@ -760,11 +760,14 @@ struct ovs_action_push_vlan {
 struct ovs_action_verify_port {
     uint64_t dpid;
     uint32_t port;
+    uint32_t pad0;
 };
 
 struct ovs_action_verify_rule {
     uint64_t dpid;
     uint16_t rule;
+    uint16_t pad0;
+    uint32_t pad1;
 };
 
 /* Data path hash algorithm for computing Datapath hash.
@@ -1042,10 +1045,10 @@ enum ovs_action_attr {
 	OVS_ACTION_ATTR_LB_OUTPUT,     /* u32 bond-id. */
 #endif
 
-	OVS_ACTION_ATTR_VERIFY_PORT = 26,  /* u32 port number. */
-	OVS_ACTION_ATTR_VERIFY_RULE = 27,  /* u16 rule number. */
+	OVS_ACTION_ATTR_VERIFY_PORT = 26,  /* struct ovs_action_verify_port. */
+	OVS_ACTION_ATTR_VERIFY_RULE = 27,  /* struct ovs_action_verify_rule. */
 	OVS_ACTION_ATTR_PUSH_VERIFY = 28,  /* No argument. */
-	OVS_ACTION_ATTR_POP_VERIFY  = 29,   /* No argument. */
+	OVS_ACTION_ATTR_POP_VERIFY  = 29,  /* No argument. */
 	__OVS_ACTION_ATTR_MAX,	      /* Nothing past this will be accepted
 				       * from userspace. */
 

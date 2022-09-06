@@ -87,6 +87,7 @@ static bool actions_may_change_flow(const struct nlattr *actions)
 		case OVS_ACTION_ATTR_POP_NSH:
 		case OVS_ACTION_ATTR_POP_VLAN:
 		case OVS_ACTION_ATTR_POP_VERIFY:
+		case OVS_ACTION_ATTR_PUSH_VERIFY:
 		case OVS_ACTION_ATTR_PUSH_ETH:
 		case OVS_ACTION_ATTR_SAMPLE:
 		case OVS_ACTION_ATTR_SET:
@@ -2036,7 +2037,8 @@ static int __ovs_nla_put_key(const struct sw_flow_key *swkey,
 		ether_addr_copy(eth_key->eth_dst, output->eth.dst);
 
         if (eth_type_verify(swkey->eth.vhead.type)) {
-            pr_warn("put_key: type verify");
+            WARN_ON_ONCE(true);
+            //pr_warn("put_key: type verify");
         }
 
 		if (swkey->eth.vlan.tci || eth_type_vlan(swkey->eth.type)) {

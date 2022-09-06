@@ -129,8 +129,8 @@ odp_action_len(uint16_t type)
     case OVS_ACTION_ATTR_POP_VLAN: return 0;
     case OVS_ACTION_ATTR_PUSH_MPLS: return sizeof(struct ovs_action_push_mpls);
     case OVS_ACTION_ATTR_POP_MPLS: return sizeof(ovs_be16);
-    case OVS_ACTION_ATTR_VERIFY_PORT: return sizeof(uint32_t);
-    case OVS_ACTION_ATTR_VERIFY_RULE: return sizeof(uint16_t);
+    case OVS_ACTION_ATTR_VERIFY_PORT: return sizeof(struct ovs_action_verify_port);
+    case OVS_ACTION_ATTR_VERIFY_RULE: return sizeof(struct ovs_action_verify_rule);
     case OVS_ACTION_ATTR_PUSH_VERIFY: return 0;
     case OVS_ACTION_ATTR_POP_VERIFY: return 0;
     case OVS_ACTION_ATTR_RECIRC: return sizeof(uint32_t);
@@ -1233,11 +1233,13 @@ format_odp_action(struct ds *ds, const struct nlattr *a,
         break;
     }
     case OVS_ACTION_ATTR_VERIFY_PORT: {
-        ds_put_format(ds, "set_verify_port(%"PRIu32")", nl_attr_get_u32(a));
+        const struct ovs_action_verify_port *vport = nl_attr_get(a);
+        ds_put_format(ds, "set_verify_port(%"PRIu32")", vport->port);
         break;
     }
     case OVS_ACTION_ATTR_VERIFY_RULE: {
-        ds_put_format(ds, "set_verify_port(%"PRIu16")", nl_attr_get_u16(a));
+        const struct ovs_action_verify_rule *vrule = nl_attr_get(a);
+        ds_put_format(ds, "set_verify_rule(%"PRIu16")", vrule->rule);
         break;
     }
     case OVS_ACTION_ATTR_PUSH_VERIFY: {
@@ -2460,6 +2462,16 @@ parse_odp_action__(struct parse_odp_context *context, const char *s,
     if (!strncmp(s, "pop_vlan", 8)) {
         nl_msg_put_flag(actions, OVS_ACTION_ATTR_POP_VLAN);
         return 8;
+    }
+
+    if (!strncmp(s, "push_verify", 11)) {
+        nl_msg_put_flag(actions, OVS_ACTION_ATTR_PUSH_VERIFY);
+        return 11;
+    }
+
+    if (!strncmp(s, "pop_verify", 10)) {
+        nl_msg_put_flag(actions, OVS_ACTION_ATTR_POP_VERIFY);
+        return 10;
     }
 
     {
