@@ -4,7 +4,7 @@ rm -rf $OVSDB_DIR
 if [ ! -d $OVSDB_DIR ]; then
     echo "creating directory"
     mkdir -p $OVSDB_DIR
-    ovsdb-tool create "$OVSDB_DIR"/conf.db /home/intender/Workspace/ovs/vswitchd/vswitch.ovsschema
+    ovsdb-tool create "$OVSDB_DIR"/conf.db `pwd`/vswitchd/vswitch.ovsschema
 fi
 
 echo "Killing the OVSDB-server instance"
@@ -23,3 +23,4 @@ echo "Starting ovs-vswitch"
 export DB_SOCK=/usr/local/var/run/openvswitch/db.sock
 ovs-vswitchd unix:$DB_SOCK --pidfile --detach &
 
+sleep 1
